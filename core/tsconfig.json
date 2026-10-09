@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "types": ["bun"],
+    "paths": {
+      "#config": ["./config/src/index.ts"],
+      "#config/*": ["./config/src/*"],
+      "#persistence/*": ["./persistence/src/*"]
+    }
+  }
+}
