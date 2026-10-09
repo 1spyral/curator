@@ -1,0 +1,316 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "9229b489-9747-48e6-8462-0d133d06d98f",
+  "prevId": "e40a729d-afdc-405d-9c5b-3a7d8c027f8a",
+  "tables": {
+    "users": {
+      "name": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "video_recommendations": {
+      "name": "video_recommendations",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "youtube_id": {
+          "name": "youtube_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rationale": {
+          "name": "rationale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recommended_at": {
+          "name": "recommended_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "video_recommendations_youtube_id_idx": {
+          "name": "video_recommendations_youtube_id_idx",
+          "columns": [
+            "youtube_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "video_recommendations_user_id_users_id_fk": {
+          "name": "video_recommendations_user_id_users_id_fk",
+          "tableFrom": "video_recommendations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "video_recommendations_youtube_id_youtube_videos_youtube_id_fk": {
+          "name": "video_recommendations_youtube_id_youtube_videos_youtube_id_fk",
+          "tableFrom": "video_recommendations",
+          "tableTo": "youtube_videos",
+          "columnsFrom": [
+            "youtube_id"
+          ],
+          "columnsTo": [
+            "youtube_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "video_recommendations_user_id_youtube_id_pk": {
+          "columns": [
+            "user_id",
+            "youtube_id"
+          ],
+          "name": "video_recommendations_user_id_youtube_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "watched_videos": {
+      "name": "watched_videos",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "youtube_id": {
+          "name": "youtube_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "watched_at": {
+          "name": "watched_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rating_half_stars": {
+          "name": "rating_half_stars",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "watched_videos_youtube_id_idx": {
+          "name": "watched_videos_youtube_id_idx",
+          "columns": [
+            "youtube_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "watched_videos_user_id_users_id_fk": {
+          "name": "watched_videos_user_id_users_id_fk",
+          "tableFrom": "watched_videos",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "watched_videos_youtube_id_youtube_videos_youtube_id_fk": {
+          "name": "watched_videos_youtube_id_youtube_videos_youtube_id_fk",
+          "tableFrom": "watched_videos",
+          "tableTo": "youtube_videos",
+          "columnsFrom": [
+            "youtube_id"
+          ],
+          "columnsTo": [
+            "youtube_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "watched_videos_user_id_youtube_id_pk": {
+          "columns": [
+            "user_id",
+            "youtube_id"
+          ],
+          "name": "watched_videos_user_id_youtube_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "watched_videos_rating_half_stars_check": {
+          "name": "watched_videos_rating_half_stars_check",
+          "value": "\n    \"watched_videos\".\"rating_half_stars\" IS NULL OR (\n      typeof(\"watched_videos\".\"rating_half_stars\") = 'integer'\n      AND \"watched_videos\".\"rating_half_stars\" BETWEEN 1 AND 10\n    )\n  "
+        }
+      }
+    },
+    "youtube_channels": {
+      "name": "youtube_channels",
+      "columns": {
+        "youtube_id": {
+          "name": "youtube_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "youtube_videos": {
+      "name": "youtube_videos",
+      "columns": {
+        "youtube_id": {
+          "name": "youtube_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "duration_seconds": {
+          "name": "duration_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "thumbnail_url": {
+          "name": "thumbnail_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "youtube_videos_channel_id_youtube_channels_youtube_id_fk": {
+          "name": "youtube_videos_channel_id_youtube_channels_youtube_id_fk",
+          "tableFrom": "youtube_videos",
+          "tableTo": "youtube_channels",
+          "columnsFrom": [
+            "channel_id"
+          ],
+          "columnsTo": [
+            "youtube_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

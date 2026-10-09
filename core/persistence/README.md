@@ -62,4 +62,23 @@ and exposed as a JavaScript `Date`.
 Insert or update the channel before inserting its videos. Each video references
 an existing channel, and a channel cannot be deleted while videos reference it.
 Channel and video YouTube IDs are their respective primary keys. Derive watch
-URLs from video IDs. These tables have no user associations yet.
+URLs from video IDs.
+
+## User recommendations and watched videos
+
+`videoRecommendations` links a user and video with a required `rationale` and
+`recommendedAt` timestamp. `watchedVideos` links a user and video with a
+`watchedAt` timestamp and optional `notes` and `ratingHalfStars`. Timestamps
+default to insertion time and are exposed as JavaScript `Date` values.
+
+Each table allows one record per `(userId, youtubeId)` pair. A watched record
+can exist without a recommendation, and watching does not remove an existing
+recommendation. Feedback can be added, edited, or cleared later.
+
+`ratingHalfStars` is an integer from 1 to 10, or `null` for no rating. Divide it
+by two for the displayed 0.5–5 star rating. The database rejects fractional
+values and values outside this range.
+
+Both relationships require existing users and videos. Deleting a user or video
+cascades to its recommendation and watched records. Workflow operations belong
+in future core library functions; this schema does not implement them.
