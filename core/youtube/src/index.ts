@@ -3,6 +3,8 @@ import { createDataApiProvider } from "./providers/youtube-data-api";
 import type { YouTubeProvider, YouTubeProviderOptions } from "./types";
 
 export { type YouTubeConfig, youtubeConfigSchema } from "./config";
+export { loadChannel, loadVideo } from "./loaders";
+export { type LoadYouTubeInput, loadYouTubeInputSchema } from "./schemas/loaders";
 export { channelMetadataSchema, videoMetadataSchema } from "./schemas/metadata";
 export type {
   ChannelMetadata,

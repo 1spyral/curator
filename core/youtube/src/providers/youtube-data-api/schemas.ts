@@ -11,6 +11,7 @@ export const videoItemSchema = z.object({
   snippet: z.object({
     title: nonEmptyTextSchema,
     channelId: nonEmptyTextSchema,
+    channelTitle: nonEmptyTextSchema,
     publishedAt: z
       .string()
       .refine(

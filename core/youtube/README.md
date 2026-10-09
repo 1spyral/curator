@@ -1,8 +1,8 @@
 # YouTube
 
-`@curator/core/youtube` fetches video and channel metadata by YouTube ID. The
-module does not save metadata to the database. Metadata types are independent
-of the persistence schema.
+`@curator/core/youtube` fetches video and channel metadata by YouTube ID and
+provides loaders that upsert it into the shared catalog. Provider lookups do not
+write to the database; their metadata types are independent of the persistence schema.
 
 ```ts
 import { coreConfigSchema } from "@curator/core/config";
@@ -34,7 +34,7 @@ at any config level are rejected, and config validation failures throw
 `ZodError` with field paths. Call `youtubeConfigSchema.parse(input)` to validate
 module settings, apply defaults, and produce frozen output.
 
-`getVideo(id)` returns `youtubeId`, `title`, `channelId`, `durationSeconds`,
+`getVideo(id)` returns `youtubeId`, `title`, `channelId`, `channelTitle`, `durationSeconds`,
 `publishedAt` as a `Date`, and `thumbnailUrl`. `getChannel(id)` returns
 `youtubeId` and `title`. Both accept individual IDs, not URLs, handles, or lists.
 
@@ -57,7 +57,33 @@ Pass `{ fetch: yourFetcher }` as the factory's second argument for mocked tests.
 Video duration is converted to integer seconds, and thumbnails are selected in
 order: maxres, standard, high, medium, default.
 
+## Catalog loaders
+
+```ts
+import { loadChannel, loadVideo } from "@curator/core/youtube";
+
+const video = await loadVideo(db, youtube, { youtubeId: "dQw4w9WgXcQ" });
+const channel = await loadChannel(db, youtube, { youtubeId: "UC-channel-id" });
+```
+
+Both loaders fetch fresh metadata on every call and upsert by YouTube ID. They
+return the same success/failure wrapper as providers, with persisted records on
+success. Invalid input returns `invalid-input`; malformed or mismatched provider
+metadata returns `invalid-response`. Provider failures pass through without writes.
+Database errors reject the promise.
+
+`loadVideo` upserts the channel using the video response's `channelId` and
+`channelTitle`, then upserts the video in one transaction. The channel need not
+already exist, and no separate channel lookup is made. Channel titles remain in
+the channel table; `channelTitle` is provider metadata only. Updates preserve
+existing recommendation and watched records. `loadChannel` independently upserts
+the channel title without loading any videos.
+
+These operations require no actor: trusted hosts control access to shared catalog
+writes. Hosts exposing ingestion to callers must authorize access before invoking
+them. `loadYouTubeInputSchema` validates the explicit ID input and strips unknown fields.
+
 Enable YouTube Data API v3 for the key's Google Cloud project. Endpoint details:
 [videos.list](https://developers.google.com/youtube/v3/docs/videos/list) and
 [channels.list](https://developers.google.com/youtube/v3/docs/channels/list).
-Search, batching, caching, fallback providers, and database ingestion are deferred.
+Search, batching, caching, and fallback providers are deferred.

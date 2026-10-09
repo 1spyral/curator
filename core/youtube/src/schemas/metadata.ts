@@ -7,6 +7,7 @@ export const videoMetadataSchema = z.object({
   youtubeId: nonEmptyTextSchema,
   title: nonEmptyTextSchema,
   channelId: nonEmptyTextSchema,
+  channelTitle: nonEmptyTextSchema,
   durationSeconds: z.number().int().nonnegative(),
   publishedAt: z.date(),
   thumbnailUrl: httpUrlSchema,

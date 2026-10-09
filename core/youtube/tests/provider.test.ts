@@ -20,6 +20,7 @@ function videoItem() {
     snippet: {
       title: "Example video",
       channelId,
+      channelTitle: "Example channel",
       publishedAt: "2026-01-01T12:00:00Z",
       thumbnails: { high: { url: "https://example.com/high.jpg" } },
     },
@@ -42,6 +43,7 @@ test("requests and normalizes video metadata", async () => {
       youtubeId: videoId,
       title: "Example video",
       channelId,
+      channelTitle: "Example channel",
       durationSeconds: 933,
       publishedAt: new Date("2026-01-01T12:00:00Z"),
       thumbnailUrl: "https://example.com/high.jpg",
@@ -164,6 +166,9 @@ test("requires all normalized video fields and valid channel titles", async () =
     },
     (item) => {
       item.snippet.channelId = "";
+    },
+    (item) => {
+      item.snippet.channelTitle = " ";
     },
     (item) => {
       item.snippet.publishedAt = "invalid";

@@ -124,6 +124,7 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
         youtubeId,
         title: snippet.title,
         channelId: snippet.channelId,
+        channelTitle: snippet.channelTitle,
         durationSeconds: durationSeconds(contentDetails.duration),
         publishedAt: snippet.publishedAt,
         thumbnailUrl: thumbnailUrl(snippet.thumbnails),

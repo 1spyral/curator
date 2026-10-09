@@ -6,7 +6,7 @@
 - [Identity](identity/README.md): actor contracts and authorization errors; hosts authenticate callers.
 - [Persistence](persistence/README.md): SQLite setup, schema, and migrations.
 - [Shelf](shelf/README.md): recommendation operations.
-- [YouTube](youtube/README.md): metadata providers and configuration.
+- [YouTube](youtube/README.md): metadata providers, configuration, and catalog loaders.
 
 To use core from another workspace, add `"@curator/core": "workspace:*"` to
 that workspace's dependencies and run `bun install` from the repository root.
