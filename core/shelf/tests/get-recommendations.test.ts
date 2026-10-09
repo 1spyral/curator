@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { type Actor, AuthorizationError } from "@curator/core/identity";
 import {
+  type GetRecommendationInput,
   type GetRecommendationsInput,
+  getRecommendation,
+  getRecommendationInputSchema,
   getRecommendations,
   getRecommendationsInputSchema,
 } from "@curator/core/shelf";
@@ -78,6 +81,129 @@ beforeEach(() => {
 });
 
 afterEach(() => persistence.close());
+
+test("gets the exact recommendation pair, including watched videos, with default metadata omitted", () => {
+  const target = { userId: "user-1", youtubeId: "video-d" };
+  const parsed = getRecommendationInputSchema.parse({ ...target, watchStatus: "unwatched" });
+  expect(parsed).toEqual({
+    ...target,
+    includeVideoMetadata: false,
+    includeChannelMetadata: false,
+  });
+  expect(getRecommendation(persistence.db, actor, parsed)).toEqual({
+    ...target,
+    rationale: "Rationale d",
+    recommendedAt: new Date("2026-02-03T12:00:00Z"),
+  });
+  expect(
+    getRecommendation(persistence.db, actor, { ...target, youtubeId: "video-a" })?.rationale,
+  ).toBe("Rationale a");
+  expect(
+    getRecommendation(
+      persistence.db,
+      { userId: "user-2" },
+      { userId: "user-2", youtubeId: "video-a" },
+    ),
+  ).toEqual({
+    userId: "user-2",
+    youtubeId: "video-a",
+    rationale: "Another user's rationale",
+    recommendedAt: new Date("2026-03-01T12:00:00Z"),
+  });
+});
+
+test("single recommendation lookup returns null for missing pairs and nonexistent targets", () => {
+  for (const target of [
+    { userId: "empty-user", youtubeId: "video-a" },
+    { userId: "user-2", youtubeId: "video-d" },
+    { userId: "user-1", youtubeId: "missing-video" },
+    { userId: "missing-user", youtubeId: "video-a" },
+  ]) {
+    expect(getRecommendation(persistence.db, { userId: target.userId }, target)).toBeNull();
+  }
+});
+
+test("single recommendation lookup independently includes stored video and channel records", () => {
+  for (const youtubeId of ["video-a", "video-d"]) {
+    const video = persistence.db
+      .select()
+      .from(youtubeVideos)
+      .where(eq(youtubeVideos.youtubeId, youtubeId))
+      .get();
+    if (!video) throw new Error("Expected a stored video.");
+    const channel = persistence.db
+      .select()
+      .from(youtubeChannels)
+      .where(eq(youtubeChannels.youtubeId, video.channelId))
+      .get();
+    for (const includeVideoMetadata of [false, true]) {
+      for (const includeChannelMetadata of [false, true]) {
+        const record = getRecommendation(persistence.db, actor, {
+          userId: "user-1",
+          youtubeId,
+          includeVideoMetadata,
+          includeChannelMetadata,
+        });
+        if (!record) throw new Error("Expected a recommendation.");
+        expect(record.youtubeId).toBe(youtubeId);
+        expect(record.recommendedAt).toBeInstanceOf(Date);
+        if (includeVideoMetadata) {
+          expect(record.video).toEqual(video);
+          expect(record.video?.publishedAt).toBeInstanceOf(Date);
+        } else {
+          expect(record).not.toHaveProperty("video");
+        }
+        if (includeChannelMetadata) {
+          expect(record.channel).toEqual(channel);
+        } else {
+          expect(record).not.toHaveProperty("channel");
+        }
+      }
+    }
+  }
+});
+
+test("single recommendation lookup rejects unauthorized targets before database access", () => {
+  for (const userId of ["user-2", "missing-user"]) {
+    expect(() =>
+      getRecommendation(inaccessibleDatabase(), actor, { userId, youtubeId: "video-a" }),
+    ).toThrow(AuthorizationError);
+  }
+});
+
+test("single recommendation lookup validates actors and requires explicit targets before database access", () => {
+  const target = { userId: "user-1", youtubeId: "video-a" };
+  const invalidActors: unknown[] = [
+    undefined,
+    null,
+    {},
+    { userId: "" },
+    { userId: " \t" },
+    { userId: 123 },
+  ];
+  for (const invalidActor of invalidActors) {
+    expect(() => getRecommendation(inaccessibleDatabase(), invalidActor as Actor, target)).toThrow(
+      ZodError,
+    );
+  }
+  const invalidInputs: unknown[] = [
+    undefined,
+    null,
+    {},
+    { ...target, includeVideoMetadata: "true" },
+    { ...target, includeChannelMetadata: null },
+  ];
+  for (const field of ["userId", "youtubeId"] as const) {
+    for (const value of [undefined, null, "", " \t", 123]) {
+      invalidInputs.push({ ...target, [field]: value });
+    }
+  }
+  for (const invalidInput of invalidInputs) {
+    expect(() =>
+      getRecommendation(inaccessibleDatabase(), actor, invalidInput as GetRecommendationInput),
+    ).toThrow(ZodError);
+  }
+});
 
 test("defaults to all stored recommendations, newest first, without metadata", () => {
   const page = getRecommendations(persistence.db, actor, input);

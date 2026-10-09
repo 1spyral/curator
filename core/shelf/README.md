@@ -40,6 +40,31 @@ preserves supplied text and strips unknown fields.
 Watched videos can be recommended; their watched records and feedback remain
 unchanged. Recommendation metadata fetching, batching, and updates are deferred.
 
+## Get one recommendation
+
+```ts
+import { getRecommendation } from "@curator/core/shelf";
+
+const recommendation = getRecommendation(persistence.db, actor, {
+  userId: "existing-user-id",
+  youtubeId: "existing-video-id",
+  includeVideoMetadata: true,
+  includeChannelMetadata: true,
+});
+```
+
+`getRecommendation()` synchronously returns `RecommendationItem | null` for the
+explicit user/video pair. It validates actor and input, then requires the actor's
+user ID to match the target before database access. Invalid input throws `ZodError`;
+unauthorized targets throw `AuthorizationError`. Missing pairs, including nonexistent
+users or videos, return `null`. Watched videos' recommendations remain accessible.
+
+Both metadata flags default to false and independently add stored nested `video`
+and `channel` records. Unrequested fields are omitted; channel-only requests work.
+Retrieval does not contact YouTube. `getRecommendationInputSchema` and
+`GetRecommendationInput` are exported; the schema strips unknown fields and keeps
+defaulted flags optional for callers.
+
 ## Get recommendations
 
 ```ts

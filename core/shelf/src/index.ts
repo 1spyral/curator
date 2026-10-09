@@ -1,5 +1,6 @@
 export {
   addRecommendation,
+  getRecommendation,
   getRecommendations,
   type RecommendationItem,
   type RecommendationsPage,
@@ -7,7 +8,9 @@ export {
 export {
   type AddRecommendationInput,
   addRecommendationInputSchema,
+  type GetRecommendationInput,
   type GetRecommendationsInput,
+  getRecommendationInputSchema,
   getRecommendationsInputSchema,
 } from "./schemas/recommendations";
 export {

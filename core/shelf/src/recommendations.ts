@@ -25,7 +25,9 @@ import type { Persistence } from "#persistence/sqlite";
 import {
   type AddRecommendationInput,
   addRecommendationInputSchema,
+  type GetRecommendationInput,
   type GetRecommendationsInput,
+  getRecommendationInputSchema,
   getRecommendationsInputSchema,
   recommendationCursorSchema,
 } from "./schemas/recommendations";
@@ -42,6 +44,27 @@ export type RecommendationsPage = {
   nextCursor: string | null;
 };
 
+function selectRecommendations(
+  db: Persistence["db"],
+  options: { includeVideoMetadata: boolean; includeChannelMetadata: boolean },
+) {
+  const query = db
+    .select({
+      ...getTableColumns(videoRecommendations),
+      ...(options.includeVideoMetadata ? { video: youtubeVideos } : {}),
+      ...(options.includeChannelMetadata ? { channel: youtubeChannels } : {}),
+    })
+    .from(videoRecommendations)
+    .$dynamic();
+  const videoQuery =
+    options.includeVideoMetadata || options.includeChannelMetadata
+      ? query.innerJoin(youtubeVideos, eq(videoRecommendations.youtubeId, youtubeVideos.youtubeId))
+      : query;
+  return options.includeChannelMetadata
+    ? videoQuery.innerJoin(youtubeChannels, eq(youtubeVideos.channelId, youtubeChannels.youtubeId))
+    : videoQuery;
+}
+
 export function addRecommendation(
   db: Persistence["db"],
   actor: Actor,
@@ -57,6 +80,30 @@ export function addRecommendation(
   const recommendation = db.insert(videoRecommendations).values(values).returning().get();
   if (!recommendation) throw new Error("Expected the inserted recommendation to be returned.");
   return recommendation;
+}
+
+export function getRecommendation(
+  db: Persistence["db"],
+  actor: Actor,
+  input: GetRecommendationInput,
+): RecommendationItem | null {
+  const caller = actorSchema.parse(actor);
+  const values = getRecommendationInputSchema.parse(input);
+  if (caller.userId !== values.userId) {
+    throw new AuthorizationError(
+      "The actor is not authorized to read recommendations from this user's shelf.",
+    );
+  }
+  return (
+    selectRecommendations(db, values)
+      .where(
+        and(
+          eq(videoRecommendations.userId, values.userId),
+          eq(videoRecommendations.youtubeId, values.youtubeId),
+        ),
+      )
+      .get() ?? null
+  );
 }
 
 export function getRecommendations(
@@ -103,24 +150,7 @@ export function getRecommendations(
         )
       : undefined;
 
-  const query = db
-    .select({
-      ...getTableColumns(videoRecommendations),
-      ...(values.includeVideoMetadata ? { video: youtubeVideos } : {}),
-      ...(values.includeChannelMetadata ? { channel: youtubeChannels } : {}),
-    })
-    .from(videoRecommendations)
-    .$dynamic();
-
-  const videoQuery =
-    values.includeVideoMetadata || values.includeChannelMetadata
-      ? query.innerJoin(youtubeVideos, eq(videoRecommendations.youtubeId, youtubeVideos.youtubeId))
-      : query;
-  const metadataQuery = values.includeChannelMetadata
-    ? videoQuery.innerJoin(youtubeChannels, eq(youtubeVideos.channelId, youtubeChannels.youtubeId))
-    : videoQuery;
-
-  const rows = metadataQuery
+  const rows = selectRecommendations(db, values)
     .where(and(eq(videoRecommendations.userId, values.userId), watchedCondition, cursorCondition))
     .orderBy(order(videoRecommendations.recommendedAt), order(videoRecommendations.youtubeId))
     .limit(values.limit + 1)

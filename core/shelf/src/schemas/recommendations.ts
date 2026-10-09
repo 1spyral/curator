@@ -10,6 +10,15 @@ export const addRecommendationInputSchema = z.object({
 
 export type AddRecommendationInput = z.infer<typeof addRecommendationInputSchema>;
 
+export const getRecommendationInputSchema = z.object({
+  userId: nonBlankString,
+  youtubeId: nonBlankString,
+  includeVideoMetadata: z.boolean().default(false),
+  includeChannelMetadata: z.boolean().default(false),
+});
+
+export type GetRecommendationInput = z.input<typeof getRecommendationInputSchema>;
+
 const watchStatusSchema = z.enum(["watched", "unwatched", "both"]);
 const sortBySchema = z.literal("recommendedAt");
 const sortOrderSchema = z.enum(["asc", "desc"]);
