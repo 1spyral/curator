@@ -6,7 +6,9 @@
     "paths": {
       "#config": ["./config/src/index.ts"],
       "#config/*": ["./config/src/*"],
-      "#persistence/*": ["./persistence/src/*"]
+      "#persistence/*": ["./persistence/src/*"],
+      "#shelf": ["./shelf/src/index.ts"],
+      "#shelf/*": ["./shelf/src/*"]
     }
   }
 }
