@@ -1,20 +1,20 @@
-export { openDatabase, type Persistence } from "./sqlite";
-export { persistenceConfigSchema, type PersistenceConfig } from "./config";
+export { type PersistenceConfig, persistenceConfigSchema } from "./config";
 export { migrateDatabase } from "./migrate";
-export { users, type UserRecord, type NewUserRecord } from "./schema";
 export {
-  videoRecommendations,
-  type VideoRecommendationRecord,
+  type NewUserRecord,
   type NewVideoRecommendationRecord,
-  watchedVideos,
-  type WatchedVideoRecord,
   type NewWatchedVideoRecord,
-} from "./schema";
-export {
-  youtubeChannels,
-  type YouTubeChannelRecord,
   type NewYouTubeChannelRecord,
-  youtubeVideos,
-  type YouTubeVideoRecord,
   type NewYouTubeVideoRecord,
+  type UserRecord,
+  users,
+  type VideoRecommendationRecord,
+  videoRecommendations,
+  type WatchedVideoRecord,
+  watchedVideos,
+  type YouTubeChannelRecord,
+  type YouTubeVideoRecord,
+  youtubeChannels,
+  youtubeVideos,
 } from "./schema";
+export { openDatabase, type Persistence } from "./sqlite";

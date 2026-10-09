@@ -1,17 +1,17 @@
-import { youtubeConfigSchema, type YouTubeConfig } from "./config";
+import { type YouTubeConfig, youtubeConfigSchema } from "./config";
 import { createDataApiProvider } from "./providers/youtube-data-api";
 import type { YouTubeProvider, YouTubeProviderOptions } from "./types";
 
-export { youtubeConfigSchema, type YouTubeConfig } from "./config";
-export { videoMetadataSchema, channelMetadataSchema } from "./schemas/metadata";
+export { type YouTubeConfig, youtubeConfigSchema } from "./config";
+export { channelMetadataSchema, videoMetadataSchema } from "./schemas/metadata";
 export type {
-  VideoMetadata,
   ChannelMetadata,
-  YouTubeResult,
+  VideoMetadata,
   YouTubeErrorCode,
+  YouTubeFetch,
   YouTubeProvider,
   YouTubeProviderOptions,
-  YouTubeFetch,
+  YouTubeResult,
 } from "./types";
 
 export function createYouTubeProvider(

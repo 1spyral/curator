@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { ZodError } from "zod";
 import { coreConfigSchema } from "@curator/core/config";
 import { persistenceConfigSchema } from "@curator/core/persistence";
 import { youtubeConfigSchema } from "@curator/core/youtube";
+import { ZodError } from "zod";
 
 test("exported schemas apply defaults for omitted and undefined sections", () => {
   const expected = coreConfigSchema.parse({});

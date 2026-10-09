@@ -1,12 +1,12 @@
 import { expect, mock, test } from "bun:test";
 import assert from "node:assert/strict";
 import {
-  createYouTubeProvider,
-  youtubeConfigSchema,
   channelMetadataSchema,
+  createYouTubeProvider,
   videoMetadataSchema,
   type YouTubeFetch,
   type YouTubeProviderOptions,
+  youtubeConfigSchema,
 } from "@curator/core/youtube";
 
 const videoId = "dQw4w9WgXcQ";

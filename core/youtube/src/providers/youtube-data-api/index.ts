@@ -1,3 +1,4 @@
+import { channelMetadataSchema, videoMetadataSchema } from "../../schemas/metadata";
 import type {
   ChannelMetadata,
   VideoMetadata,
@@ -6,7 +7,6 @@ import type {
   YouTubeProvider,
   YouTubeResult,
 } from "../../types";
-import { channelMetadataSchema, videoMetadataSchema } from "../../schemas/metadata";
 import {
   apiErrorReasonSchema,
   apiErrorSchema,

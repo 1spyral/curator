@@ -1,21 +1,21 @@
-export { users, type UserRecord, type NewUserRecord } from "./users";
+export { type NewUserRecord, type UserRecord, users } from "./users";
 export {
-  videoRecommendations,
-  type VideoRecommendationRecord,
   type NewVideoRecommendationRecord,
+  type VideoRecommendationRecord,
+  videoRecommendations,
 } from "./video-recommendations";
 export {
-  watchedVideos,
-  type WatchedVideoRecord,
   type NewWatchedVideoRecord,
+  type WatchedVideoRecord,
+  watchedVideos,
 } from "./watched-videos";
 export {
-  youtubeChannels,
-  type YouTubeChannelRecord,
   type NewYouTubeChannelRecord,
+  type YouTubeChannelRecord,
+  youtubeChannels,
 } from "./youtube-channels";
 export {
-  youtubeVideos,
-  type YouTubeVideoRecord,
   type NewYouTubeVideoRecord,
+  type YouTubeVideoRecord,
+  youtubeVideos,
 } from "./youtube-videos";

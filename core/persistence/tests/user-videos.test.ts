@@ -4,12 +4,12 @@ import { and, eq } from "drizzle-orm";
 import {
   migrateDatabase,
   openDatabase,
+  type Persistence,
   users,
   videoRecommendations,
   watchedVideos,
   youtubeChannels,
   youtubeVideos,
-  type Persistence,
 } from "../src";
 
 let persistence: Persistence;

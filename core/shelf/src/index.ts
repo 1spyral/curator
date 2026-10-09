@@ -1,5 +1,5 @@
 export { addRecommendation } from "./recommendations";
 export {
-  addRecommendationInputSchema,
   type AddRecommendationInput,
+  addRecommendationInputSchema,
 } from "./schemas/recommendations";

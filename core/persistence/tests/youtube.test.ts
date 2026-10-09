@@ -2,12 +2,12 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import {
   migrateDatabase,
+  type NewYouTubeVideoRecord,
   openDatabase,
+  type Persistence,
   users,
   youtubeChannels,
   youtubeVideos,
-  type NewYouTubeVideoRecord,
-  type Persistence,
 } from "../src";
 
 let persistence: Persistence;

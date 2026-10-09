@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { ZodError } from "zod";
 import { addRecommendation, addRecommendationInputSchema } from "@curator/core/shelf";
+import { ZodError } from "zod";
 import {
   migrateDatabase,
   openDatabase,
+  type Persistence,
   users,
   videoRecommendations,
   watchedVideos,
   youtubeChannels,
   youtubeVideos,
-  type Persistence,
 } from "#persistence/index";
 
 let persistence: Persistence;
