@@ -38,7 +38,7 @@ is inferred from this schema, which is also exported for callers. Validation
 preserves supplied text and strips unknown fields.
 
 Watched videos can be recommended; their watched records and feedback remain
-unchanged. Metadata fetching, batching, and update operations are deferred.
+unchanged. Recommendation metadata fetching, batching, and updates are deferred.
 
 ## Get recommendations
 
@@ -96,3 +96,85 @@ An empty shelf, including a nonexistent authorized target, returns an empty page
 and `RecommendationsPage` are exported for callers. The input schema strips unknown
 fields, applies defaults, and validates the opaque cursor while preserving its string
 representation. Parsed inputs can be passed directly to `getRecommendations()`.
+
+## Watched videos
+
+Watched operations accept `(db, actor, input)` and require an explicit target
+`userId`. They validate input and actor identity, then enforce the same ownership
+rule as recommendations before database access. Invalid input throws `ZodError`;
+another user's target throws `AuthorizationError`.
+
+```ts
+import {
+  createWatchedVideo,
+  getWatchedVideo,
+  getWatchedVideos,
+  updateWatchedVideo,
+} from "@curator/core/shelf";
+
+const target = {
+  userId: "existing-user-id",
+  youtubeId: "existing-video-id",
+};
+
+const watched = createWatchedVideo(persistence.db, actor, {
+  ...target,
+  watchedAt: new Date("2026-01-01T12:00:00Z"),
+  notes: "Helpful examples",
+  ratingHalfStars: 9,
+});
+
+const updated = updateWatchedVideo(persistence.db, actor, {
+  ...target,
+  watchedAt: new Date("2026-01-02T12:00:00Z"),
+  notes: null,
+});
+
+const single = getWatchedVideo(persistence.db, actor, {
+  ...target,
+  includeVideoMetadata: true,
+  includeChannelMetadata: true,
+});
+
+const page = getWatchedVideos(persistence.db, actor, {
+  userId: target.userId,
+  includeVideoMetadata: true,
+  limit: 20,
+  sortBy: "watchedAt",
+  sortOrder: "desc",
+});
+```
+
+Creation returns the saved record. `createdAt` is generated at insertion and
+immutable through shelf operations; `watchedAt` defaults to now or accepts a
+supplied `Date`. Both are stored with second precision and returned as `Date`s.
+Feedback is optional: `notes` accepts strings or `null`, and `ratingHalfStars`
+accepts integers 1–10 or `null`. Divide by two to display 0.5–5 stars. Notes
+preserve whitespace and accept empty strings. Omitted feedback is stored as `null`.
+The user and video must exist. Duplicate creation rejects without changing the
+existing record.
+
+Updates return the saved record or `null` when the pair does not exist. They never
+create implicitly. Supply at least one defined editable field: `watchedAt`,
+`notes`, or `ratingHalfStars`. Omitted or `undefined` fields remain unchanged;
+`null` clears feedback. Watch time cannot be cleared. Unknown fields are stripped;
+targets and `createdAt` cannot be modified. Recommendations are preserved.
+
+Single lookups return a watched item or `null`. Lists return `{ items, nextCursor }`.
+Both independently support `includeVideoMetadata` and `includeChannelMetadata`,
+defaulting to false; requested nested `video` and `channel` records come from
+SQLite. Unrequested metadata is omitted, and channel-only requests work.
+
+Lists default to `limit: 50`, `sortBy: "watchedAt"`, and `sortOrder: "desc"`.
+Choose `"watchedAt"` or `"createdAt"` and `"asc"` or `"desc"`. Equal dates use
+video ID in the same direction. Pass an opaque `nextCursor` back unchanged; `null`
+means there are no further results. Cursors are bound to the watched operation,
+target user, sort field, and direction. Limits and metadata flags may change
+between pages. Deleted cursor rows do not prevent continuation. There is no
+snapshot guarantee across changes, including edits to watch time. Empty targets
+return empty pages.
+
+Input schemas and types are exported for all four operations. Schemas strip
+unknown fields and keep cursors as strings, allowing parsed inputs to be passed
+directly to the functions. Retrieval types are `WatchedVideoItem` and
+`WatchedVideosPage`.

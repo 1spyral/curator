@@ -73,8 +73,11 @@ URLs from video IDs.
 
 `videoRecommendations` links a user and video with a required `rationale` and
 `recommendedAt` timestamp. `watchedVideos` links a user and video with a
-`watchedAt` timestamp and optional `notes` and `ratingHalfStars`. Timestamps
-default to insertion time and are exposed as JavaScript `Date` values.
+`watchedAt` timestamp, a `createdAt` timestamp, and optional `notes` and `ratingHalfStars`. Timestamps
+default to insertion time and are exposed as JavaScript `Date` values with second
+precision. Shelf operations keep `createdAt` immutable while allowing watch-time
+corrections. Migration `0003_watched_created_at` backfills legacy creation times
+from `watchedAt` as an approximation; the original creation times were not recorded.
 
 Each table allows one record per `(userId, youtubeId)` pair. A watched record
 can exist without a recommendation, and watching does not remove an existing
@@ -85,5 +88,5 @@ by two for the displayed 0.5–5 star rating. The database rejects fractional
 values and values outside this range.
 
 Both relationships require existing users and videos. Deleting a user or video
-cascades to its recommendation and watched records. Workflow operations belong
-in future core library functions; this schema does not implement them.
+cascades to its recommendation and watched records. Authorized workflow operations
+live in [Shelf](../shelf/README.md).

@@ -99,6 +99,7 @@ test("recommends watched videos without altering watched timestamps or feedback"
     userId: input.userId,
     youtubeId: input.youtubeId,
     watchedAt: new Date("2026-01-01T12:00:00Z"),
+    createdAt: new Date("2026-02-01T12:00:00Z"),
     notes: "Useful examples",
     ratingHalfStars: 9,
   };

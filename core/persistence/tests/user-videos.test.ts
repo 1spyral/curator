@@ -103,7 +103,7 @@ test("timestamps default at insertion and explicit timestamps round-trip as Date
   const watched = db.select().from(watchedVideos).get();
   assert(recommendation, "Expected the inserted recommendation to exist.");
   assert(watched, "Expected the inserted watched video to exist.");
-  for (const date of [recommendation.recommendedAt, watched.watchedAt]) {
+  for (const date of [recommendation.recommendedAt, watched.watchedAt, watched.createdAt]) {
     expect(date).toBeInstanceOf(Date);
     expect(date.getTime()).toBeGreaterThanOrEqual(start);
     expect(date.getTime()).toBeLessThanOrEqual(Date.now());

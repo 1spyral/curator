@@ -10,3 +10,21 @@ export {
   type GetRecommendationsInput,
   getRecommendationsInputSchema,
 } from "./schemas/recommendations";
+export {
+  type CreateWatchedVideoInput,
+  createWatchedVideoInputSchema,
+  type GetWatchedVideoInput,
+  type GetWatchedVideosInput,
+  getWatchedVideoInputSchema,
+  getWatchedVideosInputSchema,
+  type UpdateWatchedVideoInput,
+  updateWatchedVideoInputSchema,
+} from "./schemas/watched-videos";
+export {
+  createWatchedVideo,
+  getWatchedVideo,
+  getWatchedVideos,
+  updateWatchedVideo,
+  type WatchedVideoItem,
+  type WatchedVideosPage,
+} from "./watched-videos";
