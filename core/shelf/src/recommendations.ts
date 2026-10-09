@@ -1,19 +1,13 @@
 import { videoRecommendations, type VideoRecommendationRecord } from "#persistence/schema";
 import type { Persistence } from "#persistence/sqlite";
+import { addRecommendationInputSchema, type AddRecommendationInput } from "./schemas/recommendations";
 
-export type AddRecommendationInput = {
-  userId: string;
-  youtubeId: string;
-  rationale: string;
-};
+export type { AddRecommendationInput } from "./schemas/recommendations";
 
 export function addRecommendation(
   db: Persistence["db"],
   input: AddRecommendationInput,
 ): VideoRecommendationRecord {
-  return db.insert(videoRecommendations).values({
-    userId: input.userId,
-    youtubeId: input.youtubeId,
-    rationale: input.rationale,
-  }).returning().get()!;
+  const values = addRecommendationInputSchema.parse(input);
+  return db.insert(videoRecommendations).values(values).returning().get()!;
 }

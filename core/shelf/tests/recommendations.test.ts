@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { addRecommendation } from "@curator/core/shelf";
+import { ZodError } from "zod";
+import { addRecommendation, addRecommendationInputSchema } from "@curator/core/shelf";
 import {
   migrateDatabase,
   openDatabase,
@@ -88,4 +89,32 @@ test("recommends watched videos without altering watched timestamps or feedback"
   db.insert(watchedVideos).values(watched).run();
   expect(addRecommendation(db, input)).toMatchObject(input);
   expect(db.select().from(watchedVideos).all()).toEqual([watched]);
+});
+
+test("rejects blank fields before inserting a recommendation", () => {
+  for (const field of ["userId", "youtubeId", "rationale"] as const) {
+    for (const value of ["", " \t\n"]) {
+      expect(() => addRecommendation(persistence.db, { ...input, [field]: value }))
+        .toThrow(ZodError);
+    }
+  }
+  expect(persistence.db.select().from(videoRecommendations).all()).toHaveLength(0);
+});
+
+test("input schema rejects missing or wrongly typed fields", () => {
+  for (const field of ["userId", "youtubeId", "rationale"] as const) {
+    for (const value of [undefined, null, 123]) {
+      const result = addRecommendationInputSchema.safeParse({ ...input, [field]: value });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues[0]?.path).toEqual([field]);
+    }
+  }
+});
+
+test("preserves rationale text and excludes extra fields from insertion", () => {
+  const extended = { ...input, rationale: "  Helpful examples.  ", recommendedAt: new Date("2000-01-01") };
+  expect(addRecommendationInputSchema.parse(extended)).toEqual({ ...input, rationale: extended.rationale });
+  const result = addRecommendation(persistence.db, extended);
+  expect(result.rationale).toBe(extended.rationale);
+  expect(result.recommendedAt.getTime()).toBeGreaterThan(extended.recommendedAt.getTime());
 });

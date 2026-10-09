@@ -20,6 +20,10 @@ The user and video must already exist. A duplicate `(userId, youtubeId)` pair
 throws a database constraint error and leaves the existing recommendation
 unchanged. Missing users or videos also throw database constraint errors.
 
+`addRecommendationInputSchema` validates required, nonblank string fields before
+insertion. Invalid input throws `ZodError` and creates no record. The input type
+is inferred from this schema, which is also exported for callers. Validation
+preserves supplied text and strips unknown fields.
+
 Watched videos can be recommended; their watched records and feedback remain
-unchanged. Inputs are typed, with no additional runtime validation. Metadata
-fetching, batching, and update operations are deferred.
+unchanged. Metadata fetching, batching, and update operations are deferred.
