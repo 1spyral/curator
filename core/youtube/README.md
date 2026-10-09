@@ -5,10 +5,10 @@ module does not save metadata to the database. Metadata types are independent
 of the persistence schema.
 
 ```ts
-import { parseCoreConfig } from "@curator/core/config";
+import { coreConfigSchema } from "@curator/core/config";
 import { createYouTubeProvider } from "@curator/core/youtube";
 
-const config = parseCoreConfig({
+const config = coreConfigSchema.parse({
   youtube: {
     provider: "youtube-data-api",
     youtubeDataApi: { apiKey: "your-api-key" },
@@ -29,9 +29,19 @@ provider. Config parsing permits a missing key for database-only commands, but
 provider creation requires a nonempty key. Unsupported selectors and malformed
 config throw errors. Keep the provider and its credentials in server-side code.
 
+`youtubeConfigSchema` is the module's exported Zod config schema. Unknown fields
+at any config level are rejected, and config validation failures throw
+`ZodError` with field paths. Call `youtubeConfigSchema.parse(input)` to validate
+module settings, apply defaults, and produce frozen output.
+
 `getVideo(id)` returns `youtubeId`, `title`, `channelId`, `durationSeconds`,
 `publishedAt` as a `Date`, and `thumbnailUrl`. `getChannel(id)` returns
 `youtubeId` and `title`. Both accept individual IDs, not URLs, handles, or lists.
+
+`videoMetadataSchema` and `channelMetadataSchema` validate normalized metadata;
+the corresponding TypeScript types are inferred from them. Provider-specific
+response schemas accept extra upstream fields. Failed response validation maps
+to the existing failure wrapper rather than returning raw Zod errors.
 
 Lookups return `{ success: true, data }` or `{ success: false, error }`. Failure
 codes are `invalid-input`, `not-found`, `invalid-response`, `provider-error`,

@@ -1,15 +1,12 @@
 import type {
   ChannelMetadata, VideoMetadata, YouTubeErrorCode, YouTubeFetch,
   YouTubeProvider, YouTubeResult,
-} from "../types";
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isText(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
-}
+} from "../../types";
+import { channelMetadataSchema, videoMetadataSchema } from "../../schemas/metadata";
+import {
+  apiErrorReasonSchema, apiErrorSchema, channelItemSchema, itemIdentitySchema,
+  itemListSchema, thumbnailSchema, videoItemSchema, youtubeIdSchema,
+} from "./schemas";
 
 function failure(code: YouTubeErrorCode, message: string): YouTubeResult<never> {
   return { success: false, error: { code, message } };
@@ -24,24 +21,17 @@ function durationSeconds(value: unknown): number | null {
   return Number.isSafeInteger(seconds) ? seconds : null;
 }
 
-function thumbnailUrl(value: unknown): string | null {
-  if (!isObject(value)) return null;
+function thumbnailUrl(value: Record<string, unknown>): string | null {
   for (const size of ["maxres", "standard", "high", "medium", "default"]) {
-    const thumbnail = value[size];
-    if (!isObject(thumbnail) || !isText(thumbnail.url)) continue;
-    try {
-      const url = new URL(thumbnail.url);
-      if (url.protocol === "https:" || url.protocol === "http:") return thumbnail.url;
-    } catch {
-      // Try the next available thumbnail size.
-    }
+    const thumbnail = thumbnailSchema.safeParse(value[size]);
+    if (thumbnail.success) return thumbnail.data.url;
   }
   return null;
 }
 
 export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): YouTubeProvider {
   async function request(resource: "videos" | "channels", id: string): Promise<YouTubeResult<Record<string, unknown>>> {
-    if (typeof id !== "string" || !/^[A-Za-z0-9_-]+$/.test(id)) {
+    if (!youtubeIdSchema.safeParse(id).success) {
       return failure("invalid-input", "Provide a single YouTube ID, not a URL or list.");
     }
     const url = new URL(`https://www.googleapis.com/youtube/v3/${resource}`);
@@ -63,22 +53,25 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
           success: false,
           error: { code: "provider-error", message: "YouTube Data API request failed.", status: response.status },
         };
-        if (isObject(body) && isObject(body.error) && Array.isArray(body.error.errors)) {
-          const first = body.error.errors[0];
-          if (isObject(first) && typeof first.reason === "string"
-            && /^[A-Za-z][A-Za-z0-9_]{0,99}$/.test(first.reason) && !first.reason.includes(apiKey)) {
-            result.error.reason = first.reason;
+        const apiError = apiErrorSchema.safeParse(body);
+        if (apiError.success) {
+          const reason = apiErrorReasonSchema.safeParse(apiError.data.error.errors[0]);
+          if (reason.success && !reason.data.reason.includes(apiKey)) {
+            result.error.reason = reason.data.reason;
           }
         }
         return result;
       }
-      if (!isObject(body) || !Array.isArray(body.items)) {
+      const list = itemListSchema.safeParse(body);
+      if (!list.success) {
         return failure("invalid-response", "YouTube returned an invalid item list.");
       }
-      if (body.items.length === 0) return failure("not-found", "No accessible matching YouTube item was found.");
-      const item = body.items.find((entry: unknown) => isObject(entry) && entry.id === id);
-      if (!isObject(item)) return failure("invalid-response", "YouTube returned no matching item ID.");
-      return { success: true, data: item };
+      if (list.data.items.length === 0) return failure("not-found", "No accessible matching YouTube item was found.");
+      for (const entry of list.data.items) {
+        const item = itemIdentitySchema.safeParse(entry);
+        if (item.success && item.data.id === id) return { success: true, data: item.data };
+      }
+      return failure("invalid-response", "YouTube returned no matching item ID.");
     } catch (error) {
       if (signal.aborted || (error instanceof Error && error.name === "TimeoutError")) {
         return failure("timeout", "YouTube Data API request timed out.");
@@ -91,31 +84,31 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
     async getVideo(youtubeId): Promise<YouTubeResult<VideoMetadata>> {
       const result = await request("videos", youtubeId);
       if (!result.success) return result;
-      const { snippet, contentDetails } = result.data;
-      if (!isObject(snippet) || !isObject(contentDetails)) {
+      const item = videoItemSchema.safeParse(result.data);
+      if (!item.success) {
         return failure("invalid-response", "Video metadata is incomplete.");
       }
-      const duration = durationSeconds(contentDetails.duration);
-      const thumbnail = thumbnailUrl(snippet.thumbnails);
-      const publishedAt = isText(snippet.publishedAt) && /^\d{4}-\d{2}-\d{2}T/.test(snippet.publishedAt)
-        ? new Date(snippet.publishedAt) : null;
-      if (!isText(snippet.title) || !isText(snippet.channelId) || duration === null || thumbnail === null
-        || publishedAt === null || !Number.isFinite(publishedAt.getTime())) {
+      const { snippet, contentDetails } = item.data;
+      const metadata = videoMetadataSchema.safeParse({
+        youtubeId, title: snippet.title, channelId: snippet.channelId,
+        durationSeconds: durationSeconds(contentDetails.duration),
+        publishedAt: snippet.publishedAt, thumbnailUrl: thumbnailUrl(snippet.thumbnails),
+      });
+      if (!metadata.success) {
         return failure("invalid-response", "Video metadata is incomplete or invalid.");
       }
-      return { success: true, data: {
-        youtubeId, title: snippet.title, channelId: snippet.channelId,
-        durationSeconds: duration, publishedAt, thumbnailUrl: thumbnail,
-      } };
+      return { success: true, data: metadata.data };
     },
     async getChannel(youtubeId): Promise<YouTubeResult<ChannelMetadata>> {
       const result = await request("channels", youtubeId);
       if (!result.success) return result;
-      const { snippet } = result.data;
-      if (!isObject(snippet) || !isText(snippet.title)) {
+      const item = channelItemSchema.safeParse(result.data);
+      if (!item.success) {
         return failure("invalid-response", "Channel metadata is incomplete or invalid.");
       }
-      return { success: true, data: { youtubeId, title: snippet.title } };
+      const metadata = channelMetadataSchema.safeParse({ youtubeId, title: item.data.snippet.title });
+      if (!metadata.success) return failure("invalid-response", "Channel metadata is incomplete or invalid.");
+      return { success: true, data: metadata.data };
     },
   };
 }

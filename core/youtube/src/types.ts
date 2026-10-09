@@ -1,13 +1,8 @@
-export type VideoMetadata = {
-  youtubeId: string;
-  title: string;
-  channelId: string;
-  durationSeconds: number;
-  publishedAt: Date;
-  thumbnailUrl: string;
-};
+import type { z } from "zod";
+import type { channelMetadataSchema, videoMetadataSchema } from "./schemas/metadata";
 
-export type ChannelMetadata = { youtubeId: string; title: string };
+export type VideoMetadata = z.infer<typeof videoMetadataSchema>;
+export type ChannelMetadata = z.infer<typeof channelMetadataSchema>;
 
 export type YouTubeErrorCode =
   | "invalid-input"

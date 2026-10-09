@@ -1,13 +1,14 @@
 import { expect, mock, test } from "bun:test";
 import {
-  createYouTubeProvider, parseYouTubeConfig,
+  createYouTubeProvider, youtubeConfigSchema,
+  channelMetadataSchema, videoMetadataSchema,
   type YouTubeFetch, type YouTubeProviderOptions,
 } from "@curator/core/youtube";
 
 const videoId = "dQw4w9WgXcQ";
 const channelId = "UCabcdefghijABCDEFGHIJKL";
 const key = "secret-test-api-key";
-const config = parseYouTubeConfig({ youtubeDataApi: { apiKey: key } });
+const config = youtubeConfigSchema.parse({ youtubeDataApi: { apiKey: key } });
 
 function videoItem() {
   return {
@@ -146,4 +147,42 @@ test("wraps network failures and timeouts without exposing credentials", async (
     expect(result).toMatchObject({ success: false, error: { code } });
     expect(JSON.stringify(result)).not.toContain(key);
   }
+});
+
+test("accepts extra upstream fields and produces metadata matching exported schemas", async () => {
+  const item = videoItem();
+  const result = await provider({
+    etag: "example", pageInfo: { totalResults: 1 },
+    items: [null, { ...item, statistics: { viewCount: "100" },
+      snippet: { ...item.snippet, description: "Extra data", tags: ["example"] } }],
+  }).getVideo(videoId);
+  expect(result.success).toBe(true);
+  if (result.success) {
+    expect(videoMetadataSchema.parse(result.data)).toEqual(result.data);
+    expect(result.data).not.toHaveProperty("statistics");
+    expect(result.data).not.toHaveProperty("description");
+  }
+  const channel = await provider({ items: [{ id: channelId,
+    snippet: { title: "Channel", description: "Extra data" }, statistics: {} }] }).getChannel(channelId);
+  expect(channel.success).toBe(true);
+  if (channel.success) expect(channelMetadataSchema.parse(channel.data)).toEqual(channel.data);
+});
+
+test("falls back past malformed preferred thumbnails", async () => {
+  const item = videoItem();
+  const result = await provider({ items: [{ ...item, snippet: { ...item.snippet,
+    thumbnails: { maxres: null, standard: { url: "ftp://example.com/image.jpg" }, ...item.snippet.thumbnails },
+  } }] }).getVideo(videoId);
+  expect(result.success).toBe(true);
+  if (result.success) expect(result.data.thumbnailUrl).toBe("https://example.com/high.jpg");
+});
+
+test("validation failures do not expose upstream data or Zod issues", async () => {
+  const item = videoItem();
+  const result = await provider({ items: [{ ...item,
+    snippet: { ...item.snippet, title: { secret: key } }, privateData: key,
+  }] }).getVideo(videoId);
+  expect(result).toMatchObject({ success: false, error: { code: "invalid-response" } });
+  expect(JSON.stringify(result)).not.toContain(key);
+  expect(JSON.stringify(result)).not.toContain("issues");
 });

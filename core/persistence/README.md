@@ -8,10 +8,15 @@ bun install
 bun run db:migrate
 ```
 
-The host supplies an object to `parseCoreConfig()` from `@curator/core/config`,
+The host supplies an object to `coreConfigSchema.parse(input)` from `@curator/core/config`,
 then passes `config.persistence` to `openDatabase(config.persistence)`.
-Persistence owns its config type, parser, and defaults. Parsers accept objects
+Persistence owns its config schema, type, and defaults. Schemas accept objects
 and do not read files or environment variables.
+
+`persistenceConfigSchema` is the exported Zod schema; `PersistenceConfig` is
+inferred from it. Unknown config fields and invalid values throw `ZodError`
+through `persistenceConfigSchema.parse(input)` or `coreConfigSchema.parse(input)`.
+Both schemas apply defaults and produce frozen config objects.
 
 The migration command uses the default database path, `.data/curator.sqlite`.
 To migrate another database, the host passes its config to `openDatabase()` and
@@ -33,10 +38,10 @@ pending migrations. Add new migrations instead of editing already applied ones.
 Use persistence through core's export:
 
 ```ts
-import { parseCoreConfig } from "@curator/core/config";
+import { coreConfigSchema } from "@curator/core/config";
 import { openDatabase, migrateDatabase } from "@curator/core/persistence";
 
-const config = parseCoreConfig({
+const config = coreConfigSchema.parse({
   persistence: { databasePath: "./data/curator.sqlite" },
 });
 const persistence = openDatabase(config.persistence);

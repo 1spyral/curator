@@ -2,7 +2,7 @@
 
 `@curator/core` contains Curator's application logic and persistence.
 
-- [Config](config/src/index.ts): composes module config parsers; the host supplies settings at startup.
+- [Config](config/README.md): composes module config schemas; the host supplies settings at startup.
 - [Persistence](persistence/README.md): SQLite setup, schema, and migrations.
 - [Shelf](shelf/README.md): recommendation operations.
 - [YouTube](youtube/README.md): metadata providers and configuration.
