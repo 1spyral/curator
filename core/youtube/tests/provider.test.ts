@@ -1,4 +1,5 @@
 import { expect, mock, test } from "bun:test";
+import assert from "node:assert/strict";
 import {
   createYouTubeProvider,
   youtubeConfigSchema,
@@ -47,7 +48,9 @@ test("requests and normalizes video metadata", async () => {
     },
   });
   expect(fetcher).toHaveBeenCalledTimes(1);
-  const [input, init] = fetcher.mock.calls[0]!;
+  const call = fetcher.mock.calls[0];
+  assert(call, "Expected a video metadata request to be made.");
+  const [input, init] = call;
   const url = new URL(String(input));
   expect(url.origin + url.pathname).toBe("https://www.googleapis.com/youtube/v3/videos");
   expect(url.searchParams.get("id")).toBe(videoId);
@@ -69,7 +72,10 @@ test("requests and normalizes channel metadata", async () => {
     success: true,
     data: { youtubeId: channelId, title: "Example channel" },
   });
-  const url = new URL(String(fetcher.mock.calls[0]![0]));
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  const call = fetcher.mock.calls[0];
+  assert(call, "Expected a channel metadata request to be made.");
+  const url = new URL(String(call[0]));
   expect(url.pathname).toBe("/youtube/v3/channels");
   expect(url.searchParams.get("id")).toBe(channelId);
   expect(url.searchParams.get("part")).toBe("snippet");

@@ -12,5 +12,7 @@ export function addRecommendation(
   input: AddRecommendationInput,
 ): VideoRecommendationRecord {
   const values = addRecommendationInputSchema.parse(input);
-  return db.insert(videoRecommendations).values(values).returning().get()!;
+  const recommendation = db.insert(videoRecommendations).values(values).returning().get();
+  if (!recommendation) throw new Error("Expected the inserted recommendation to be returned.");
+  return recommendation;
 }

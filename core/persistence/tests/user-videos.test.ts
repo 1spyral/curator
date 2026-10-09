@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import assert from "node:assert/strict";
 import { and, eq } from "drizzle-orm";
 import {
   migrateDatabase,
@@ -98,10 +99,11 @@ test("timestamps default at insertion and explicit timestamps round-trip as Date
     .values({ ...pair, rationale })
     .run();
   db.insert(watchedVideos).values(pair).run();
-  for (const date of [
-    db.select().from(videoRecommendations).get()!.recommendedAt,
-    db.select().from(watchedVideos).get()!.watchedAt,
-  ]) {
+  const recommendation = db.select().from(videoRecommendations).get();
+  const watched = db.select().from(watchedVideos).get();
+  assert(recommendation, "Expected the inserted recommendation to exist.");
+  assert(watched, "Expected the inserted watched video to exist.");
+  for (const date of [recommendation.recommendedAt, watched.watchedAt]) {
     expect(date).toBeInstanceOf(Date);
     expect(date.getTime()).toBeGreaterThanOrEqual(start);
     expect(date.getTime()).toBeLessThanOrEqual(Date.now());
@@ -110,8 +112,8 @@ test("timestamps default at insertion and explicit timestamps round-trip as Date
   const date = new Date("2026-02-01T12:00:00Z");
   db.update(videoRecommendations).set({ recommendedAt: date }).run();
   db.update(watchedVideos).set({ watchedAt: date }).run();
-  expect(db.select().from(videoRecommendations).get()!.recommendedAt).toEqual(date);
-  expect(db.select().from(watchedVideos).get()!.watchedAt).toEqual(date);
+  expect(db.select().from(videoRecommendations).get()?.recommendedAt).toEqual(date);
+  expect(db.select().from(watchedVideos).get()?.watchedAt).toEqual(date);
 });
 
 test("feedback can be absent, added, edited, and cleared", () => {
@@ -150,14 +152,14 @@ test("ratings accept half-star steps and reject invalid stored values", () => {
   db.insert(watchedVideos).values(pair).run();
   for (let ratingHalfStars = 1; ratingHalfStars <= 10; ratingHalfStars++) {
     db.update(watchedVideos).set({ ratingHalfStars }).run();
-    expect(db.select().from(watchedVideos).get()!.ratingHalfStars).toBe(ratingHalfStars);
+    expect(db.select().from(watchedVideos).get()?.ratingHalfStars).toBe(ratingHalfStars);
   }
   for (const invalid of [-1, 0, 11, 1.5, 9.5, "invalid"]) {
     expect(() =>
       db.$client.query("UPDATE watched_videos SET rating_half_stars = ?").run(invalid),
     ).toThrow(/CHECK constraint failed/);
   }
-  expect(db.select().from(watchedVideos).get()!.ratingHalfStars).toBe(10);
+  expect(db.select().from(watchedVideos).get()?.ratingHalfStars).toBe(10);
 });
 
 test("deleting a user removes only their recommendation and watched records", () => {
@@ -167,9 +169,9 @@ test("deleting a user removes only their recommendation and watched records", ()
   }
   db.delete(users).where(eq(users.id, pair.userId)).run();
   expect(db.select().from(videoRecommendations).all()).toHaveLength(1);
-  expect(db.select().from(videoRecommendations).get()!.userId).toBe("user-2");
+  expect(db.select().from(videoRecommendations).get()?.userId).toBe("user-2");
   expect(db.select().from(watchedVideos).all()).toHaveLength(1);
-  expect(db.select().from(watchedVideos).get()!.userId).toBe("user-2");
+  expect(db.select().from(watchedVideos).get()?.userId).toBe("user-2");
   expect(db.select().from(youtubeVideos).all()).toHaveLength(1);
 });
 
@@ -192,7 +194,9 @@ test("rerunning migrations preserves recommendations and feedback", () => {
     .run();
   const recommendation = db.select().from(videoRecommendations).get();
   const watched = db.select().from(watchedVideos).get();
+  assert(recommendation, "Expected the recommendation to exist before rerunning migrations.");
+  assert(watched, "Expected the watched video to exist before rerunning migrations.");
   migrateDatabase(db);
-  expect(db.select().from(videoRecommendations).all()).toEqual([recommendation!]);
-  expect(db.select().from(watchedVideos).all()).toEqual([watched!]);
+  expect(db.select().from(videoRecommendations).all()).toEqual([recommendation]);
+  expect(db.select().from(watchedVideos).all()).toEqual([watched]);
 });

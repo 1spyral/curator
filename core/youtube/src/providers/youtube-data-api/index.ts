@@ -25,7 +25,7 @@ function failure(code: YouTubeErrorCode, message: string): YouTubeResult<never> 
 function durationSeconds(value: unknown): number | null {
   if (typeof value !== "string" || value.endsWith("T")) return null;
   const match = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(value);
-  if (!match || !match.slice(1).some((part) => part !== undefined)) return null;
+  if (!match?.slice(1).some((part) => part !== undefined)) return null;
   const seconds =
     Number(match[1] ?? 0) * 86400 +
     Number(match[2] ?? 0) * 3600 +
