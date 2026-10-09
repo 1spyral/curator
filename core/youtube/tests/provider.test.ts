@@ -1,4 +1,4 @@
-import { expect, mock, test } from "bun:test";
+import { expect, mock, spyOn, test } from "bun:test";
 import assert from "node:assert/strict";
 import {
   channelMetadataSchema,
@@ -52,9 +52,9 @@ test("requests and normalizes video metadata", async () => {
   assert(call, "Expected a video metadata request to be made.");
   const [input, init] = call;
   const url = new URL(String(input));
-  expect(url.origin + url.pathname).toBe("https://www.googleapis.com/youtube/v3/videos");
+  expect(url.origin + url.pathname).toBe("https://youtube.googleapis.com/youtube/v3/videos");
   expect(url.searchParams.get("id")).toBe(videoId);
-  expect(url.searchParams.get("part")).toBe("snippet,contentDetails");
+  expect(url.searchParams.getAll("part").join(",")).toBe("snippet,contentDetails");
   expect(url.searchParams.get("key")).toBe(key);
   expect(init?.signal).toBeInstanceOf(AbortSignal);
 });
@@ -244,6 +244,60 @@ test("wraps network failures and timeouts without exposing credentials", async (
     expect(result).toMatchObject({ success: false, error: { code } });
     expect(JSON.stringify(result)).not.toContain(key);
   }
+});
+
+test("does not retry HTTP or network failures through the SDK", async () => {
+  for (const status of [429, 500]) {
+    const fetcher = mock<YouTubeFetch>(async () =>
+      Response.json({ error: { errors: [{ reason: "backendError" }] } }, { status }),
+    );
+    const result = await createYouTubeProvider(config, { fetch: fetcher }).getVideo(videoId);
+    expect(result).toMatchObject({ success: false, error: { code: "provider-error", status } });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  }
+  const fetcher = mock<YouTubeFetch>(async () => {
+    throw new TypeError(`Network failure with key=${key}`);
+  });
+  const result = await createYouTubeProvider(config, { fetch: fetcher }).getChannel(channelId);
+  expect(result).toMatchObject({ success: false, error: { code: "network-error" } });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(JSON.stringify(result)).not.toContain(key);
+});
+
+test("passes the 15-second deadline through the SDK and maps aborts to safe timeout results", async () => {
+  const signal = AbortSignal.abort(new DOMException(`Timeout with key=${key}`, "TimeoutError"));
+  const timeout = spyOn(AbortSignal, "timeout").mockReturnValue(signal);
+  try {
+    const fetcher = mock<YouTubeFetch>(async (_input, init) => {
+      assert(init?.signal, "Expected an abort signal.");
+      init.signal.throwIfAborted();
+      throw new Error("Expected the supplied deadline to have expired.");
+    });
+    const result = await createYouTubeProvider(config, { fetch: fetcher }).getVideo(videoId);
+    expect(timeout).toHaveBeenCalledWith(15000);
+    expect(result).toMatchObject({ success: false, error: { code: "timeout" } });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(result)).not.toContain(key);
+  } finally {
+    timeout.mockRestore();
+  }
+});
+
+test("maps SDK response-body read failures to credential-safe network errors", async () => {
+  const fetcher = mock<YouTubeFetch>(
+    async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(new Error(`Body read failure with key=${key}`));
+          },
+        }),
+      ),
+  );
+  const result = await createYouTubeProvider(config, { fetch: fetcher }).getVideo(videoId);
+  expect(result).toMatchObject({ success: false, error: { code: "network-error" } });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(JSON.stringify(result)).not.toContain(key);
 });
 
 test("accepts extra upstream fields and produces metadata matching exported schemas", async () => {

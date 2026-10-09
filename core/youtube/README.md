@@ -50,7 +50,9 @@ codes are `invalid-input`, `not-found`, `invalid-response`, `provider-error`,
 or invalid required metadata is `invalid-response`. Errors do not expose
 credential-bearing request URLs or raw provider messages.
 
-The adapter uses native fetch with a 15-second timeout and no automatic retry.
+The adapter uses Google's narrow `@googleapis/youtube` SDK, with native fetch,
+a 15-second abort signal, and SDK retries explicitly disabled. SDK responses are
+validated and normalized through the provider's existing schemas and result contract.
 Pass `{ fetch: yourFetcher }` as the factory's second argument for mocked tests.
 Video duration is converted to integer seconds, and thumbnails are selected in
 order: maxres, standard, high, medium, default.

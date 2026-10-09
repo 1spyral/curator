@@ -15,6 +15,7 @@
     "db:migrate": "bun persistence/src/migrate.ts"
   },
   "dependencies": {
+    "@googleapis/youtube": "^40.0.0",
     "drizzle-orm": "^0.45.4",
     "zod": "^4"
   },

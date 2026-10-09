@@ -1,3 +1,4 @@
+import { youtube } from "@googleapis/youtube";
 import { channelMetadataSchema, videoMetadataSchema } from "../../schemas/metadata";
 import type {
   ChannelMetadata,
@@ -43,6 +44,17 @@ function thumbnailUrl(value: Record<string, unknown>): string | null {
 }
 
 export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): YouTubeProvider {
+  const client = youtube({
+    version: "v3",
+    auth: apiKey,
+    // Gaxios only calls fetch; Bun's extra typed preconnect property is unused.
+    fetchImplementation: fetcher as typeof globalThis.fetch,
+    responseType: "json",
+    retry: false,
+    // Keep HTTP failure mapping inside the provider's credential-safe result contract.
+    validateStatus: () => true,
+  });
+
   async function request(
     resource: "videos" | "channels",
     id: string,
@@ -50,20 +62,13 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
     if (!youtubeIdSchema.safeParse(id).success) {
       return failure("invalid-input", "Provide a single YouTube ID, not a URL or list.");
     }
-    const url = new URL(`https://www.googleapis.com/youtube/v3/${resource}`);
-    url.searchParams.set("part", resource === "videos" ? "snippet,contentDetails" : "snippet");
-    url.searchParams.set("id", id);
-    url.searchParams.set("key", apiKey);
     const signal = AbortSignal.timeout(15000);
     try {
-      const response = await fetcher(url, { signal });
-      let body: unknown;
-      try {
-        body = await response.json();
-      } catch (error) {
-        if (signal.aborted || !(error instanceof SyntaxError)) throw error;
-        if (response.ok) return failure("invalid-response", "YouTube returned invalid JSON.");
-      }
+      const response =
+        resource === "videos"
+          ? await client.videos.list({ id: [id], part: ["snippet", "contentDetails"] }, { signal })
+          : await client.channels.list({ id: [id], part: ["snippet"] }, { signal });
+      const body: unknown = response.data;
       if (!response.ok) {
         const result: YouTubeResult<never> = {
           success: false,
@@ -94,7 +99,12 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
       }
       return failure("invalid-response", "YouTube returned no matching item ID.");
     } catch (error) {
-      if (signal.aborted || (error instanceof Error && error.name === "TimeoutError")) {
+      if (
+        signal.aborted ||
+        (error instanceof Error &&
+          (error.name === "TimeoutError" ||
+            (error.cause instanceof Error && error.cause.name === "TimeoutError")))
+      ) {
         return failure("timeout", "YouTube Data API request timed out.");
       }
       return failure("network-error", "YouTube Data API request could not be completed.");
