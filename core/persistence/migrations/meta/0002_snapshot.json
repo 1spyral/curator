@@ -72,9 +72,7 @@
       "indexes": {
         "video_recommendations_youtube_id_idx": {
           "name": "video_recommendations_youtube_id_idx",
-          "columns": [
-            "youtube_id"
-          ],
+          "columns": ["youtube_id"],
           "isUnique": false
         }
       },
@@ -83,12 +81,8 @@
           "name": "video_recommendations_user_id_users_id_fk",
           "tableFrom": "video_recommendations",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -96,22 +90,15 @@
           "name": "video_recommendations_youtube_id_youtube_videos_youtube_id_fk",
           "tableFrom": "video_recommendations",
           "tableTo": "youtube_videos",
-          "columnsFrom": [
-            "youtube_id"
-          ],
-          "columnsTo": [
-            "youtube_id"
-          ],
+          "columnsFrom": ["youtube_id"],
+          "columnsTo": ["youtube_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "video_recommendations_user_id_youtube_id_pk": {
-          "columns": [
-            "user_id",
-            "youtube_id"
-          ],
+          "columns": ["user_id", "youtube_id"],
           "name": "video_recommendations_user_id_youtube_id_pk"
         }
       },
@@ -161,9 +148,7 @@
       "indexes": {
         "watched_videos_youtube_id_idx": {
           "name": "watched_videos_youtube_id_idx",
-          "columns": [
-            "youtube_id"
-          ],
+          "columns": ["youtube_id"],
           "isUnique": false
         }
       },
@@ -172,12 +157,8 @@
           "name": "watched_videos_user_id_users_id_fk",
           "tableFrom": "watched_videos",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -185,22 +166,15 @@
           "name": "watched_videos_youtube_id_youtube_videos_youtube_id_fk",
           "tableFrom": "watched_videos",
           "tableTo": "youtube_videos",
-          "columnsFrom": [
-            "youtube_id"
-          ],
-          "columnsTo": [
-            "youtube_id"
-          ],
+          "columnsFrom": ["youtube_id"],
+          "columnsTo": ["youtube_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "watched_videos_user_id_youtube_id_pk": {
-          "columns": [
-            "user_id",
-            "youtube_id"
-          ],
+          "columns": ["user_id", "youtube_id"],
           "name": "watched_videos_user_id_youtube_id_pk"
         }
       },
@@ -288,12 +262,8 @@
           "name": "youtube_videos_channel_id_youtube_channels_youtube_id_fk",
           "tableFrom": "youtube_videos",
           "tableTo": "youtube_channels",
-          "columnsFrom": [
-            "channel_id"
-          ],
-          "columnsTo": [
-            "youtube_id"
-          ],
+          "columnsFrom": ["channel_id"],
+          "columnsTo": ["youtube_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }

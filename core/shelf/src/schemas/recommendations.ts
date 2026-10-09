@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-const nonBlankString = z.string().refine(
-  (value) => value.trim().length > 0,
-  "Must not be blank.",
-);
+const nonBlankString = z.string().refine((value) => value.trim().length > 0, "Must not be blank.");
 
 export const addRecommendationInputSchema = z.object({
   userId: nonBlankString,

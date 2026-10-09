@@ -11,8 +11,11 @@ export const videoItemSchema = z.object({
   snippet: z.object({
     title: nonEmptyTextSchema,
     channelId: nonEmptyTextSchema,
-    publishedAt: z.string()
-      .refine((value) => /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(new Date(value).getTime()))
+    publishedAt: z
+      .string()
+      .refine(
+        (value) => /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(new Date(value).getTime()),
+      )
       .transform((value) => new Date(value)),
     thumbnails: z.record(z.string(), z.unknown()),
   }),

@@ -112,12 +112,8 @@
           "name": "youtube_videos_channel_id_youtube_channels_youtube_id_fk",
           "tableFrom": "youtube_videos",
           "tableTo": "youtube_channels",
-          "columnsFrom": [
-            "channel_id"
-          ],
-          "columnsTo": [
-            "youtube_id"
-          ],
+          "columnsFrom": ["channel_id"],
+          "columnsTo": ["youtube_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }

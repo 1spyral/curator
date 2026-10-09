@@ -1,7 +1,9 @@
 {
   "name": "curator",
   "private": true,
-  "workspaces": ["core"],
+  "workspaces": [
+    "core"
+  ],
   "scripts": {
     "check": "biome check .",
     "check:fix": "biome check --write .",

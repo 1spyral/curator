@@ -16,7 +16,12 @@ export type YouTubeResult<T> =
   | { success: true; data: T }
   | {
       success: false;
-      error: { code: YouTubeErrorCode; message: string; status?: number; reason?: string };
+      error: {
+        code: YouTubeErrorCode;
+        message: string;
+        status?: number;
+        reason?: string;
+      };
     };
 
 export interface YouTubeProvider {

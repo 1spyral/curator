@@ -1,11 +1,21 @@
 import type {
-  ChannelMetadata, VideoMetadata, YouTubeErrorCode, YouTubeFetch,
-  YouTubeProvider, YouTubeResult,
+  ChannelMetadata,
+  VideoMetadata,
+  YouTubeErrorCode,
+  YouTubeFetch,
+  YouTubeProvider,
+  YouTubeResult,
 } from "../../types";
 import { channelMetadataSchema, videoMetadataSchema } from "../../schemas/metadata";
 import {
-  apiErrorReasonSchema, apiErrorSchema, channelItemSchema, itemIdentitySchema,
-  itemListSchema, thumbnailSchema, videoItemSchema, youtubeIdSchema,
+  apiErrorReasonSchema,
+  apiErrorSchema,
+  channelItemSchema,
+  itemIdentitySchema,
+  itemListSchema,
+  thumbnailSchema,
+  videoItemSchema,
+  youtubeIdSchema,
 } from "./schemas";
 
 function failure(code: YouTubeErrorCode, message: string): YouTubeResult<never> {
@@ -16,8 +26,11 @@ function durationSeconds(value: unknown): number | null {
   if (typeof value !== "string" || value.endsWith("T")) return null;
   const match = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(value);
   if (!match || !match.slice(1).some((part) => part !== undefined)) return null;
-  const seconds = Number(match[1] ?? 0) * 86400 + Number(match[2] ?? 0) * 3600
-    + Number(match[3] ?? 0) * 60 + Number(match[4] ?? 0);
+  const seconds =
+    Number(match[1] ?? 0) * 86400 +
+    Number(match[2] ?? 0) * 3600 +
+    Number(match[3] ?? 0) * 60 +
+    Number(match[4] ?? 0);
   return Number.isSafeInteger(seconds) ? seconds : null;
 }
 
@@ -30,7 +43,10 @@ function thumbnailUrl(value: Record<string, unknown>): string | null {
 }
 
 export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): YouTubeProvider {
-  async function request(resource: "videos" | "channels", id: string): Promise<YouTubeResult<Record<string, unknown>>> {
+  async function request(
+    resource: "videos" | "channels",
+    id: string,
+  ): Promise<YouTubeResult<Record<string, unknown>>> {
     if (!youtubeIdSchema.safeParse(id).success) {
       return failure("invalid-input", "Provide a single YouTube ID, not a URL or list.");
     }
@@ -51,7 +67,11 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
       if (!response.ok) {
         const result: YouTubeResult<never> = {
           success: false,
-          error: { code: "provider-error", message: "YouTube Data API request failed.", status: response.status },
+          error: {
+            code: "provider-error",
+            message: "YouTube Data API request failed.",
+            status: response.status,
+          },
         };
         const apiError = apiErrorSchema.safeParse(body);
         if (apiError.success) {
@@ -66,7 +86,8 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
       if (!list.success) {
         return failure("invalid-response", "YouTube returned an invalid item list.");
       }
-      if (list.data.items.length === 0) return failure("not-found", "No accessible matching YouTube item was found.");
+      if (list.data.items.length === 0)
+        return failure("not-found", "No accessible matching YouTube item was found.");
       for (const entry of list.data.items) {
         const item = itemIdentitySchema.safeParse(entry);
         if (item.success && item.data.id === id) return { success: true, data: item.data };
@@ -90,9 +111,12 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
       }
       const { snippet, contentDetails } = item.data;
       const metadata = videoMetadataSchema.safeParse({
-        youtubeId, title: snippet.title, channelId: snippet.channelId,
+        youtubeId,
+        title: snippet.title,
+        channelId: snippet.channelId,
         durationSeconds: durationSeconds(contentDetails.duration),
-        publishedAt: snippet.publishedAt, thumbnailUrl: thumbnailUrl(snippet.thumbnails),
+        publishedAt: snippet.publishedAt,
+        thumbnailUrl: thumbnailUrl(snippet.thumbnails),
       });
       if (!metadata.success) {
         return failure("invalid-response", "Video metadata is incomplete or invalid.");
@@ -106,8 +130,12 @@ export function createDataApiProvider(apiKey: string, fetcher: YouTubeFetch): Yo
       if (!item.success) {
         return failure("invalid-response", "Channel metadata is incomplete or invalid.");
       }
-      const metadata = channelMetadataSchema.safeParse({ youtubeId, title: item.data.snippet.title });
-      if (!metadata.success) return failure("invalid-response", "Channel metadata is incomplete or invalid.");
+      const metadata = channelMetadataSchema.safeParse({
+        youtubeId,
+        title: item.data.snippet.title,
+      });
+      if (!metadata.success)
+        return failure("invalid-response", "Channel metadata is incomplete or invalid.");
       return { success: true, data: metadata.data };
     },
   };

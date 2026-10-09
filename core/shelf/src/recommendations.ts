@@ -1,6 +1,9 @@
 import { videoRecommendations, type VideoRecommendationRecord } from "#persistence/schema";
 import type { Persistence } from "#persistence/sqlite";
-import { addRecommendationInputSchema, type AddRecommendationInput } from "./schemas/recommendations";
+import {
+  addRecommendationInputSchema,
+  type AddRecommendationInput,
+} from "./schemas/recommendations";
 
 export type { AddRecommendationInput } from "./schemas/recommendations";
 

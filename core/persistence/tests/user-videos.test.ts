@@ -16,7 +16,7 @@ const pair = { userId: "user-1", youtubeId: "video-1" };
 const rationale = "Explains a topic you are exploring.";
 const linkTables = ["video_recommendations", "watched_videos"] as const;
 
-function insertLink(table: typeof linkTables[number], userId: string, youtubeId: string) {
+function insertLink(table: (typeof linkTables)[number], userId: string, youtubeId: string) {
   if (table === "video_recommendations") {
     persistence.db.insert(videoRecommendations).values({ userId, youtubeId, rationale }).run();
   } else {
@@ -28,41 +28,60 @@ beforeEach(() => {
   persistence = openDatabase({ databasePath: ":memory:" });
   const { db } = persistence;
   migrateDatabase(db);
-  db.insert(users).values([
-    { id: "user-1", name: "First user" },
-    { id: "user-2", name: "Second user" },
-  ]).run();
+  db.insert(users)
+    .values([
+      { id: "user-1", name: "First user" },
+      { id: "user-2", name: "Second user" },
+    ])
+    .run();
   db.insert(youtubeChannels).values({ youtubeId: "channel-1", title: "Example channel" }).run();
-  db.insert(youtubeVideos).values({
-    youtubeId: "video-1",
-    title: "Example video",
-    channelId: "channel-1",
-    durationSeconds: 120,
-    publishedAt: new Date("2026-01-01T12:00:00Z"),
-    thumbnailUrl: "https://example.com/thumbnail.jpg",
-  }).run();
+  db.insert(youtubeVideos)
+    .values({
+      youtubeId: "video-1",
+      title: "Example video",
+      channelId: "channel-1",
+      durationSeconds: 120,
+      publishedAt: new Date("2026-01-01T12:00:00Z"),
+      thumbnailUrl: "https://example.com/thumbnail.jpg",
+    })
+    .run();
 });
 
 afterEach(() => persistence.close());
 
-test.each(linkTables.map((table) => [table] as const))("%s enforces references and one link per user/video", (table) => {
-  expect(() => insertLink(table, "missing-user", pair.youtubeId)).toThrow(/FOREIGN KEY constraint failed/);
-  expect(() => insertLink(table, pair.userId, "missing-video")).toThrow(/FOREIGN KEY constraint failed/);
-  insertLink(table, pair.userId, pair.youtubeId);
-  expect(() => insertLink(table, pair.userId, pair.youtubeId)).toThrow(/UNIQUE constraint failed/);
-  insertLink(table, "user-2", pair.youtubeId);
-  expect(persistence.db.$client.query(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 2 });
-});
+test.each(linkTables.map((table) => [table] as const))(
+  "%s enforces references and one link per user/video",
+  (table) => {
+    expect(() => insertLink(table, "missing-user", pair.youtubeId)).toThrow(
+      /FOREIGN KEY constraint failed/,
+    );
+    expect(() => insertLink(table, pair.userId, "missing-video")).toThrow(
+      /FOREIGN KEY constraint failed/,
+    );
+    insertLink(table, pair.userId, pair.youtubeId);
+    expect(() => insertLink(table, pair.userId, pair.youtubeId)).toThrow(
+      /UNIQUE constraint failed/,
+    );
+    insertLink(table, "user-2", pair.youtubeId);
+    expect(persistence.db.$client.query(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({
+      count: 2,
+    });
+  },
+);
 
 test("recommendations require a rationale", () => {
-  expect(() => persistence.db.$client.query(
-    "INSERT INTO video_recommendations (user_id, youtube_id) VALUES (?, ?)",
-  ).run(pair.userId, pair.youtubeId)).toThrow(/NOT NULL constraint failed/);
+  expect(() =>
+    persistence.db.$client
+      .query("INSERT INTO video_recommendations (user_id, youtube_id) VALUES (?, ?)")
+      .run(pair.userId, pair.youtubeId),
+  ).toThrow(/NOT NULL constraint failed/);
 });
 
 test("recommendations and watched records exist independently and coexist", () => {
   const { db } = persistence;
-  db.insert(videoRecommendations).values({ ...pair, rationale }).run();
+  db.insert(videoRecommendations)
+    .values({ ...pair, rationale })
+    .run();
   expect(db.select().from(watchedVideos).all()).toHaveLength(0);
   db.insert(watchedVideos).values({ userId: "user-2", youtubeId: pair.youtubeId }).run();
   expect(db.select().from(videoRecommendations).all()).toHaveLength(1);
@@ -75,7 +94,9 @@ test("recommendations and watched records exist independently and coexist", () =
 test("timestamps default at insertion and explicit timestamps round-trip as Dates", () => {
   const { db } = persistence;
   const start = Math.floor(Date.now() / 1000) * 1000;
-  db.insert(videoRecommendations).values({ ...pair, rationale }).run();
+  db.insert(videoRecommendations)
+    .values({ ...pair, rationale })
+    .run();
   db.insert(watchedVideos).values(pair).run();
   for (const date of [
     db.select().from(videoRecommendations).get()!.recommendedAt,
@@ -96,14 +117,32 @@ test("timestamps default at insertion and explicit timestamps round-trip as Date
 test("feedback can be absent, added, edited, and cleared", () => {
   const { db } = persistence;
   db.insert(watchedVideos).values(pair).run();
-  expect(db.select().from(watchedVideos).get()).toMatchObject({ notes: null, ratingHalfStars: null });
-  const where = and(eq(watchedVideos.userId, pair.userId), eq(watchedVideos.youtubeId, pair.youtubeId));
-  db.update(watchedVideos).set({ notes: "Helpful examples", ratingHalfStars: 9 }).where(where).run();
-  expect(db.select().from(watchedVideos).get()).toMatchObject({ notes: "Helpful examples", ratingHalfStars: 9 });
+  expect(db.select().from(watchedVideos).get()).toMatchObject({
+    notes: null,
+    ratingHalfStars: null,
+  });
+  const where = and(
+    eq(watchedVideos.userId, pair.userId),
+    eq(watchedVideos.youtubeId, pair.youtubeId),
+  );
+  db.update(watchedVideos)
+    .set({ notes: "Helpful examples", ratingHalfStars: 9 })
+    .where(where)
+    .run();
+  expect(db.select().from(watchedVideos).get()).toMatchObject({
+    notes: "Helpful examples",
+    ratingHalfStars: 9,
+  });
   db.update(watchedVideos).set({ notes: "Revised note", ratingHalfStars: 10 }).where(where).run();
-  expect(db.select().from(watchedVideos).get()).toMatchObject({ notes: "Revised note", ratingHalfStars: 10 });
+  expect(db.select().from(watchedVideos).get()).toMatchObject({
+    notes: "Revised note",
+    ratingHalfStars: 10,
+  });
   db.update(watchedVideos).set({ notes: null, ratingHalfStars: null }).where(where).run();
-  expect(db.select().from(watchedVideos).get()).toMatchObject({ notes: null, ratingHalfStars: null });
+  expect(db.select().from(watchedVideos).get()).toMatchObject({
+    notes: null,
+    ratingHalfStars: null,
+  });
 });
 
 test("ratings accept half-star steps and reject invalid stored values", () => {
@@ -114,8 +153,9 @@ test("ratings accept half-star steps and reject invalid stored values", () => {
     expect(db.select().from(watchedVideos).get()!.ratingHalfStars).toBe(ratingHalfStars);
   }
   for (const invalid of [-1, 0, 11, 1.5, 9.5, "invalid"]) {
-    expect(() => db.$client.query("UPDATE watched_videos SET rating_half_stars = ?")
-      .run(invalid)).toThrow(/CHECK constraint failed/);
+    expect(() =>
+      db.$client.query("UPDATE watched_videos SET rating_half_stars = ?").run(invalid),
+    ).toThrow(/CHECK constraint failed/);
   }
   expect(db.select().from(watchedVideos).get()!.ratingHalfStars).toBe(10);
 });
@@ -144,8 +184,12 @@ test("deleting a video removes its recommendation and watched records", () => {
 
 test("rerunning migrations preserves recommendations and feedback", () => {
   const { db } = persistence;
-  db.insert(videoRecommendations).values({ ...pair, rationale }).run();
-  db.insert(watchedVideos).values({ ...pair, notes: "Useful", ratingHalfStars: 8 }).run();
+  db.insert(videoRecommendations)
+    .values({ ...pair, rationale })
+    .run();
+  db.insert(watchedVideos)
+    .values({ ...pair, notes: "Useful", ratingHalfStars: 8 })
+    .run();
   const recommendation = db.select().from(videoRecommendations).get();
   const watched = db.select().from(watchedVideos).get();
   migrateDatabase(db);
