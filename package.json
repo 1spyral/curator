@@ -1,7 +1,7 @@
 {
   "name": "curator",
   "private": true,
-  "workspaces": ["core", "cli", "web", "shared/*"],
+  "workspaces": ["core"],
   "scripts": {
     "db:generate": "bun run --cwd core db:generate",
     "db:migrate": "bun run --cwd core db:migrate",
