@@ -13,6 +13,7 @@ export const watchedVideos = sqliteTable(
       .notNull()
       .references(() => youtubeVideos.youtubeId, { onDelete: "cascade" }),
     watchedAt: integer("watched_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
     notes: text("notes"),
     ratingHalfStars: integer("rating_half_stars"),
   },
