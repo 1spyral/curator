@@ -1,7 +1,9 @@
 import { parsePersistenceConfig, type PersistenceConfig } from "#persistence/config";
+import { parseYouTubeConfig, type YouTubeConfig } from "#youtube/config";
 
 export type CoreConfig = Readonly<{
   persistence: PersistenceConfig;
+  youtube: YouTubeConfig;
 }>;
 
 export function parseCoreConfig(input: unknown = {}): CoreConfig {
@@ -10,5 +12,6 @@ export function parseCoreConfig(input: unknown = {}): CoreConfig {
   }
 
   const persistence = "persistence" in input ? input.persistence : undefined;
-  return Object.freeze({ persistence: parsePersistenceConfig(persistence) });
+  const youtube = "youtube" in input ? input.youtube : undefined;
+  return Object.freeze({ persistence: parsePersistenceConfig(persistence), youtube: parseYouTubeConfig(youtube) });
 }

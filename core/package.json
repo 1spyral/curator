@@ -6,7 +6,8 @@
   "exports": {
     "./config": "./config/src/index.ts",
     "./persistence": "./persistence/src/index.ts",
-    "./shelf": "./shelf/src/index.ts"
+    "./shelf": "./shelf/src/index.ts",
+    "./youtube": "./youtube/src/index.ts"
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",
