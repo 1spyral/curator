@@ -51,3 +51,15 @@ try {
 Opening a connection does not apply migrations automatically. The initial schema
 contains users with text IDs; local-user initialization and authentication can
 use this same table as those features are added.
+
+## YouTube metadata
+
+`youtubeChannels` stores a channel's `youtubeId` and `title`. `youtubeVideos`
+stores `youtubeId`, `title`, `channelId`, `durationSeconds`, `publishedAt`, and
+`thumbnailUrl`. All fields are required. `publishedAt` is stored as Unix seconds
+and exposed as a JavaScript `Date`.
+
+Insert or update the channel before inserting its videos. Each video references
+an existing channel, and a channel cannot be deleted while videos reference it.
+Channel and video YouTube IDs are their respective primary keys. Derive watch
+URLs from video IDs. These tables have no user associations yet.
