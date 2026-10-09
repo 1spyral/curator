@@ -13,10 +13,10 @@ then passes `config.persistence` to `openDatabase(config.persistence)`.
 Persistence owns its config type, parser, and defaults. Parsers accept objects
 and do not read files or environment variables.
 
-The default database path is `.data/curator.sqlite`. The migration command reads
-`CURATOR_DATABASE_PATH` and supplies it to the parser to override the default.
-Relative paths resolve from the repository root. Other hosts can supply settings
-from environment variables, parsed JSON, or values already in memory.
+The migration command uses the default database path, `.data/curator.sqlite`.
+To migrate another database, the host passes its config to `openDatabase()` and
+calls `migrateDatabase()` with the resulting connection. Relative paths resolve
+from the repository root. Hosts supply configuration as objects.
 
 Define tables in `core/persistence/src/schema/` and export them from its `index.ts`.
 After editing the schema, generate and review a migration:

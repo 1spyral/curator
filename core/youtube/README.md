@@ -11,7 +11,7 @@ import { createYouTubeProvider } from "@curator/core/youtube";
 const config = parseCoreConfig({
   youtube: {
     provider: "youtube-data-api",
-    youtubeDataApi: { apiKey: process.env.YOUTUBE_DATA_API_KEY },
+    youtubeDataApi: { apiKey: "your-api-key" },
   },
 });
 const youtube = createYouTubeProvider(config.youtube);

@@ -10,9 +10,7 @@ export function migrateDatabase(db: Persistence["db"]) {
 }
 
 if (import.meta.main) {
-  const config = parseCoreConfig({
-    persistence: { databasePath: process.env.CURATOR_DATABASE_PATH },
-  });
+  const config = parseCoreConfig();
   const persistence = openDatabase(config.persistence);
   try {
     migrateDatabase(persistence.db);
