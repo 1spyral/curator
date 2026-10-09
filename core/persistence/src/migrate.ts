@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { loadCoreConfig } from "#config";
+import { parseCoreConfig } from "#config";
 import { openDatabase, type Persistence } from "./sqlite";
 
 export function migrateDatabase(db: Persistence["db"]) {
@@ -10,7 +10,9 @@ export function migrateDatabase(db: Persistence["db"]) {
 }
 
 if (import.meta.main) {
-  const config = loadCoreConfig();
+  const config = parseCoreConfig({
+    persistence: { databasePath: process.env.CURATOR_DATABASE_PATH },
+  });
   const persistence = openDatabase(config.persistence);
   try {
     migrateDatabase(persistence.db);
