@@ -3,6 +3,8 @@
 `@curator/core/shelf` provides operations on users' video collections. The host
 supplies an open, migrated database connection and a trusted actor.
 
+## Add recommendations
+
 ```ts
 import type { Actor } from "@curator/core/identity";
 import { addRecommendation } from "@curator/core/shelf";
@@ -37,3 +39,60 @@ preserves supplied text and strips unknown fields.
 
 Watched videos can be recommended; their watched records and feedback remain
 unchanged. Metadata fetching, batching, and update operations are deferred.
+
+## Get recommendations
+
+```ts
+import { getRecommendations } from "@curator/core/shelf";
+
+const page = getRecommendations(persistence.db, actor, {
+  userId: "existing-user-id",
+  includeVideoMetadata: true,
+  includeChannelMetadata: true,
+  limit: 20,
+  watchStatus: "unwatched",
+  sortBy: "recommendedAt",
+  sortOrder: "desc",
+});
+
+if (page.nextCursor) {
+  const nextPage = getRecommendations(persistence.db, actor, {
+    userId: "existing-user-id",
+    includeVideoMetadata: true,
+    includeChannelMetadata: true,
+    limit: 20,
+    watchStatus: "unwatched",
+    sortOrder: "desc",
+    cursor: page.nextCursor,
+  });
+}
+```
+
+`getRecommendations()` synchronously returns `{ items, nextCursor }`. It validates
+the actor and input, then requires the actor's ID to match the explicit target
+`userId` before database access. Invalid inputs or cursors throw `ZodError`;
+unauthorized targets throw `AuthorizationError`. Targets are never inferred.
+
+Each item contains `userId`, `youtubeId`, `rationale`, and `recommendedAt`. The
+metadata flags independently add nested `video` and `channel` records from SQLite,
+including native `Date` timestamps. Unrequested fields are omitted. Channel-only
+requests are supported. Retrieval does not contact YouTube.
+
+Only `userId` is required. Defaults are no metadata, `limit: 50`,
+`watchStatus: "both"`, `sortBy: "recommendedAt"`, and `sortOrder: "desc"`.
+Limits must be positive integers. Watched filters are `"watched"`, `"unwatched"`,
+and `"both"`, based on the target user's watched records. Sorting currently
+supports only recommendation time, with `"asc"` for oldest first and `"desc"`
+for newest first. Equal timestamps are ordered by video ID in the same direction.
+
+Pass `nextCursor` back unchanged to continue; `null` means no further results.
+Cursors are tied to the target, watched filter, and sort settings. Changing those
+requires starting without a cursor; metadata flags and limits may change between
+pages. Deleting the recommendation that supplied a cursor does not invalidate it.
+Pagination does not provide a snapshot across concurrent changes or a total count.
+An empty shelf, including a nonexistent authorized target, returns an empty page.
+
+`getRecommendationsInputSchema`, `GetRecommendationsInput`, `RecommendationItem`,
+and `RecommendationsPage` are exported for callers. The input schema strips unknown
+fields, applies defaults, and validates the opaque cursor while preserving its string
+representation. Parsed inputs can be passed directly to `getRecommendations()`.
