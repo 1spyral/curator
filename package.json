@@ -3,11 +3,14 @@
   "private": true,
   "workspaces": ["core"],
   "scripts": {
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
     "db:generate": "bun run --cwd core db:generate",
     "db:migrate": "bun run --cwd core db:migrate",
     "typecheck": "tsc --noEmit -p core/tsconfig.json"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@types/bun": "latest",
     "typescript": "^5"
   }
