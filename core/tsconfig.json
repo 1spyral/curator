@@ -6,6 +6,7 @@
     "paths": {
       "#*": ["./*/src/index.ts"],
       "#config/*": ["./config/src/*"],
+      "#identity/*": ["./identity/src/*"],
       "#persistence/*": ["./persistence/src/*"],
       "#shelf/*": ["./shelf/src/*"],
       "#youtube/*": ["./youtube/src/*"]
