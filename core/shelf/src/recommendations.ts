@@ -31,6 +31,7 @@ import {
   getRecommendationsInputSchema,
   recommendationCursorSchema,
 } from "./schemas/recommendations";
+import { ensureShelfVideo, type ShelfCreationDependencies } from "./video-loading";
 
 export type { AddRecommendationInput } from "./schemas/recommendations";
 
@@ -65,11 +66,12 @@ function selectRecommendations(
     : videoQuery;
 }
 
-export function addRecommendation(
+export async function addRecommendation(
   db: Persistence["db"],
   actor: Actor,
   input: AddRecommendationInput,
-): VideoRecommendationRecord {
+  dependencies: ShelfCreationDependencies,
+): Promise<VideoRecommendationRecord> {
   const caller = actorSchema.parse(actor);
   const values = addRecommendationInputSchema.parse(input);
   if (caller.userId !== values.userId) {
@@ -77,6 +79,7 @@ export function addRecommendation(
       "The actor is not authorized to add recommendations to this user's shelf.",
     );
   }
+  await ensureShelfVideo(db, values.userId, values.youtubeId, dependencies);
   const recommendation = db.insert(videoRecommendations).values(values).returning().get();
   if (!recommendation) throw new Error("Expected the inserted recommendation to be returned.");
   return recommendation;

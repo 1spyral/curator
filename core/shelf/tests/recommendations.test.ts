@@ -17,6 +17,11 @@ import {
   youtubeVideos,
 } from "#persistence/index";
 
+const dependencies = {
+  getYouTubeProvider: () => {
+    throw new Error("Provider should not be called for stored videos.");
+  },
+};
 let persistence: Persistence;
 const actor: Actor = { userId: "user-1" };
 const input = {
@@ -50,9 +55,9 @@ beforeEach(() => {
 
 afterEach(() => persistence.close());
 
-test("adds a recommendation and returns the saved record with its default timestamp", () => {
+test("adds a recommendation and returns the saved record with its default timestamp", async () => {
   const start = Math.floor(Date.now() / 1000) * 1000;
-  const recommendation = addRecommendation(persistence.db, actor, input);
+  const recommendation = await addRecommendation(persistence.db, actor, input, dependencies);
   expect(recommendation).toMatchObject(input);
   expect(recommendation.recommendedAt).toBeInstanceOf(Date);
   expect(recommendation.recommendedAt.getTime()).toBeGreaterThanOrEqual(start);
@@ -60,40 +65,50 @@ test("adds a recommendation and returns the saved record with its default timest
   expect(persistence.db.select().from(videoRecommendations).all()).toEqual([recommendation]);
 });
 
-test("rejects duplicates without changing the original rationale or timestamp", () => {
+test("rejects duplicates without changing the original rationale or timestamp", async () => {
   const { db } = persistence;
   const original = {
     ...input,
     recommendedAt: new Date("2026-01-01T12:00:00Z"),
   };
   db.insert(videoRecommendations).values(original).run();
-  expect(() =>
-    addRecommendation(db, actor, { ...input, rationale: "A different rationale" }),
-  ).toThrow(/UNIQUE constraint failed/);
+  await expect(
+    addRecommendation(db, actor, { ...input, rationale: "A different rationale" }, dependencies),
+  ).rejects.toThrow(/UNIQUE constraint failed/);
   expect(db.select().from(videoRecommendations).all()).toEqual([original]);
 });
 
-test("rejects missing users and videos without creating recommendations", () => {
+test("rejects missing users and videos without creating recommendations", async () => {
   const { db } = persistence;
-  expect(() =>
-    addRecommendation(db, { userId: "missing-user" }, { ...input, userId: "missing-user" }),
-  ).toThrow(/FOREIGN KEY constraint failed/);
-  expect(() => addRecommendation(db, actor, { ...input, youtubeId: "missing-video" })).toThrow(
-    /FOREIGN KEY constraint failed/,
-  );
+  await expect(
+    addRecommendation(
+      db,
+      { userId: "missing-user" },
+      { ...input, userId: "missing-user" },
+      dependencies,
+    ),
+  ).rejects.toThrow("Target user does not exist.");
+  await expect(
+    addRecommendation(db, actor, { ...input, youtubeId: "missing-video" }, dependencies),
+  ).rejects.toThrow("Provider should not be called for stored videos.");
   expect(db.select().from(videoRecommendations).all()).toHaveLength(0);
 });
 
-test("allows separate users to recommend the same video", () => {
+test("allows separate users to recommend the same video", async () => {
   const { db } = persistence;
-  const first = addRecommendation(db, actor, input);
-  const second = addRecommendation(db, { userId: "user-2" }, { ...input, userId: "user-2" });
+  const first = await addRecommendation(db, actor, input, dependencies);
+  const second = await addRecommendation(
+    db,
+    { userId: "user-2" },
+    { ...input, userId: "user-2" },
+    dependencies,
+  );
   expect(first.userId).toBe("user-1");
   expect(second.userId).toBe("user-2");
   expect(db.select().from(videoRecommendations).all()).toHaveLength(2);
 });
 
-test("recommends watched videos without altering watched timestamps or feedback", () => {
+test("recommends watched videos without altering watched timestamps or feedback", async () => {
   const { db } = persistence;
   const watched = {
     userId: input.userId,
@@ -104,22 +119,22 @@ test("recommends watched videos without altering watched timestamps or feedback"
     ratingHalfStars: 9,
   };
   db.insert(watchedVideos).values(watched).run();
-  expect(addRecommendation(db, actor, input)).toMatchObject(input);
+  expect(await addRecommendation(db, actor, input, dependencies)).toMatchObject(input);
   expect(db.select().from(watchedVideos).all()).toEqual([watched]);
 });
 
-test("rejects blank fields before inserting a recommendation", () => {
+test("rejects blank fields before inserting a recommendation", async () => {
   for (const field of ["userId", "youtubeId", "rationale"] as const) {
     for (const value of ["", " \t\n"]) {
-      expect(() => addRecommendation(persistence.db, actor, { ...input, [field]: value })).toThrow(
-        ZodError,
-      );
+      await expect(
+        addRecommendation(persistence.db, actor, { ...input, [field]: value }, dependencies),
+      ).rejects.toThrow(ZodError);
     }
   }
   expect(persistence.db.select().from(videoRecommendations).all()).toHaveLength(0);
 });
 
-test("rejects missing or wrongly typed input fields without inferring targets", () => {
+test("rejects missing or wrongly typed input fields without inferring targets", async () => {
   for (const field of ["userId", "youtubeId", "rationale"] as const) {
     for (const value of [undefined, null, 123]) {
       const result = addRecommendationInputSchema.safeParse({
@@ -129,13 +144,15 @@ test("rejects missing or wrongly typed input fields without inferring targets", 
       expect(result.success).toBe(false);
       if (!result.success) expect(result.error.issues[0]?.path).toEqual([field]);
       const invalidInput = { ...input, [field]: value } as AddRecommendationInput;
-      expect(() => addRecommendation(persistence.db, actor, invalidInput)).toThrow(ZodError);
+      await expect(
+        addRecommendation(persistence.db, actor, invalidInput, dependencies),
+      ).rejects.toThrow(ZodError);
     }
   }
   expect(persistence.db.select().from(videoRecommendations).all()).toHaveLength(0);
 });
 
-test("preserves rationale text and excludes extra fields from insertion", () => {
+test("preserves rationale text and excludes extra fields from insertion", async () => {
   const extended = {
     ...input,
     rationale: "  Helpful examples.  ",
@@ -145,28 +162,28 @@ test("preserves rationale text and excludes extra fields from insertion", () => 
     ...input,
     rationale: extended.rationale,
   });
-  const result = addRecommendation(persistence.db, actor, extended);
+  const result = await addRecommendation(persistence.db, actor, extended, dependencies);
   expect(result.rationale).toBe(extended.rationale);
   expect(result.recommendedAt.getTime()).toBeGreaterThan(extended.recommendedAt.getTime());
 });
 
-test("rejects other users' shelves before database access, even for nonexistent targets", () => {
+test("rejects other users' shelves before database access, even for nonexistent targets", async () => {
   const { db } = persistence;
-  const original = addRecommendation(db, actor, input);
+  const original = await addRecommendation(db, actor, input, dependencies);
   const inaccessibleDb = new Proxy(db, {
     get() {
       throw new Error("Authorization must happen before database access.");
     },
   });
   for (const userId of ["user-2", "missing-user"]) {
-    expect(() => addRecommendation(inaccessibleDb, actor, { ...input, userId })).toThrow(
-      AuthorizationError,
-    );
+    await expect(
+      addRecommendation(inaccessibleDb, actor, { ...input, userId }, dependencies),
+    ).rejects.toThrow(AuthorizationError);
   }
   expect(db.select().from(videoRecommendations).all()).toEqual([original]);
 });
 
-test("rejects invalid actors before database access", () => {
+test("rejects invalid actors before database access", async () => {
   const inaccessibleDb = new Proxy(persistence.db, {
     get() {
       throw new Error("Actor validation must happen before database access.");
@@ -183,7 +200,9 @@ test("rejects invalid actors before database access", () => {
     { userId: " \t\n" },
   ];
   for (const invalidActor of invalidActors) {
-    expect(() => addRecommendation(inaccessibleDb, invalidActor as Actor, input)).toThrow(ZodError);
+    await expect(
+      addRecommendation(inaccessibleDb, invalidActor as Actor, input, dependencies),
+    ).rejects.toThrow(ZodError);
   }
   expect(persistence.db.select().from(videoRecommendations).all()).toHaveLength(0);
 });

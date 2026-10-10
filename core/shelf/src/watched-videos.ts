@@ -20,6 +20,7 @@ import {
   updateWatchedVideoInputSchema,
   watchedVideosCursorSchema,
 } from "./schemas/watched-videos";
+import { ensureShelfVideo, type ShelfCreationDependencies } from "./video-loading";
 
 export type WatchedVideoItem = WatchedVideoRecord & {
   video?: YouTubeVideoRecord;
@@ -61,13 +62,15 @@ function selectWatchedVideos(
     : videoQuery;
 }
 
-export function createWatchedVideo(
+export async function createWatchedVideo(
   db: Persistence["db"],
   actor: Actor,
   input: CreateWatchedVideoInput,
-): WatchedVideoRecord {
+  dependencies: ShelfCreationDependencies,
+): Promise<WatchedVideoRecord> {
   const values = createWatchedVideoInputSchema.parse(input);
   authorizeWatchedAccess(actor, values.userId);
+  await ensureShelfVideo(db, values.userId, values.youtubeId, dependencies);
   const record = db.insert(watchedVideos).values(values).returning().get();
   if (!record) throw new Error("Expected the inserted watched record to be returned.");
   return record;

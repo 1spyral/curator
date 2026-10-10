@@ -1,26 +1,30 @@
 # Shelf
 
 `@curator/core/shelf` provides operations on users' video collections. The host
-supplies an open, migrated database connection and a trusted actor.
+supplies an open, migrated database connection and a trusted actor. Creation
+operations also require a lazy YouTube provider dependency.
 
 ## Add recommendations
 
 ```ts
 import type { Actor } from "@curator/core/identity";
 import { addRecommendation } from "@curator/core/shelf";
+import { createYouTubeProvider } from "@curator/core/youtube";
 
 // Resolved by trusted host code from a verified session or single-user configuration.
 const actor: Actor = { userId: "existing-user-id" };
 
-const recommendation = addRecommendation(persistence.db, actor, {
+const dependencies = { getYouTubeProvider: () => createYouTubeProvider(config.youtube) };
+
+const recommendation = await addRecommendation(persistence.db, actor, {
   userId: "existing-user-id",
   youtubeId: "existing-video-id",
   rationale: "Explains a topic you are exploring.",
-});
+}, dependencies);
 ```
 
-`addRecommendation()` synchronously inserts one recommendation and returns the
-saved record, including its database-generated `recommendedAt` timestamp.
+`addRecommendation()` returns a promise of the saved recommendation, including
+its database-generated `recommendedAt` timestamp.
 
 The actor identifies the caller; input `userId` explicitly identifies the target
 shelf. After validating both, shelf requires the IDs to match. A mismatch throws
@@ -28,9 +32,21 @@ shelf. After validating both, shelf requires the IDs to match. A mismatch throws
 is never inferred from the actor. Hosts authenticate callers; shelf authorizes
 operations. Roles and recommendations for other users are deferred.
 
-The user and video must already exist. A duplicate `(userId, youtubeId)` pair
-throws a database constraint error and leaves the existing recommendation
-unchanged. Missing users or videos also throw database constraint errors.
+The target user must exist. After authorization, creation checks the user and
+video in SQLite. A missing user rejects before any provider access. Missing videos
+load through `loadVideo`, which saves both video and channel metadata. Existing
+videos are reused without refreshing or constructing a provider.
+
+Both creation operations require `(db, actor, input, dependencies)`, where
+`ShelfCreationDependencies` contains `getYouTubeProvider: () => YouTubeProvider`.
+Provider failures reject with exported `VideoLoadError`; its `error` property
+retains the provider's code, message, and optional status/reason. Failed loading
+creates no shelf record. Validation, authorization, provider-construction, and
+database failures also reject the promise. A duplicate `(userId, youtubeId)` pair
+rejects with a database constraint error and preserves the existing record.
+
+Network requests run outside database transactions. The loader saves video and
+channel together; valid catalog metadata remains if a later shelf insertion fails.
 
 `addRecommendationInputSchema` validates required, nonblank string fields before
 insertion. Invalid input throws `ZodError` and creates no record. The input type
@@ -38,7 +54,7 @@ is inferred from this schema, which is also exported for callers. Validation
 preserves supplied text and strips unknown fields.
 
 Watched videos can be recommended; their watched records and feedback remain
-unchanged. Recommendation metadata fetching, batching, and updates are deferred.
+unchanged. Batching and recommendation updates are deferred.
 
 ## Get one recommendation
 
@@ -124,7 +140,8 @@ representation. Parsed inputs can be passed directly to `getRecommendations()`.
 
 ## Watched videos
 
-Watched operations accept `(db, actor, input)` and require an explicit target
+Watched reads and updates accept `(db, actor, input)`; creation additionally
+requires `dependencies` and returns a promise. All require an explicit target
 `userId`. They validate input and actor identity, then enforce the same ownership
 rule as recommendations before database access. Invalid input throws `ZodError`;
 another user's target throws `AuthorizationError`.
@@ -142,12 +159,12 @@ const target = {
   youtubeId: "existing-video-id",
 };
 
-const watched = createWatchedVideo(persistence.db, actor, {
+const watched = await createWatchedVideo(persistence.db, actor, {
   ...target,
   watchedAt: new Date("2026-01-01T12:00:00Z"),
   notes: "Helpful examples",
   ratingHalfStars: 9,
-});
+}, dependencies);
 
 const updated = updateWatchedVideo(persistence.db, actor, {
   ...target,
@@ -176,8 +193,8 @@ supplied `Date`. Both are stored with second precision and returned as `Date`s.
 Feedback is optional: `notes` accepts strings or `null`, and `ratingHalfStars`
 accepts integers 1–10 or `null`. Divide by two to display 0.5–5 stars. Notes
 preserve whitespace and accept empty strings. Omitted feedback is stored as `null`.
-The user and video must exist. Duplicate creation rejects without changing the
-existing record.
+The user must exist; missing video metadata loads automatically as described
+above. Duplicate creation rejects without changing the existing record.
 
 Updates return the saved record or `null` when the pair does not exist. They never
 create implicitly. Supply at least one defined editable field: `watchedAt`,

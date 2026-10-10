@@ -27,6 +27,11 @@ import {
   youtubeVideos,
 } from "#persistence";
 
+const dependencies = {
+  getYouTubeProvider: () => {
+    throw new Error("Provider should not be called for stored videos.");
+  },
+};
 let persistence: Persistence;
 const actor: Actor = { userId: "user-1" };
 const pair = { userId: "user-1", youtubeId: "video-a" };
@@ -96,9 +101,9 @@ function inaccessibleDatabase() {
   });
 }
 
-test("creates a watched record with generated dates and no required feedback", () => {
+test("creates a watched record with generated dates and no required feedback", async () => {
   const start = Math.floor(Date.now() / 1000) * 1000;
-  const record = createWatchedVideo(persistence.db, actor, pair);
+  const record = await createWatchedVideo(persistence.db, actor, pair, dependencies);
   expect(record).toMatchObject({ ...pair, notes: null, ratingHalfStars: null });
   for (const date of [record.watchedAt, record.createdAt]) {
     expect(date).toBeInstanceOf(Date);
@@ -108,7 +113,7 @@ test("creates a watched record with generated dates and no required feedback", (
   expect(getWatchedVideo(persistence.db, actor, pair)).toEqual(record);
 });
 
-test("accepts historical watch time and feedback while ignoring a supplied creation time", () => {
+test("accepts historical watch time and feedback while ignoring a supplied creation time", async () => {
   const watchedAt = new Date("2026-01-02T12:00:00.123Z");
   const input = {
     ...pair,
@@ -118,7 +123,7 @@ test("accepts historical watch time and feedback while ignoring a supplied creat
     createdAt: new Date("2000-01-01"),
   };
   const start = Math.floor(Date.now() / 1000) * 1000;
-  const record = createWatchedVideo(persistence.db, actor, input);
+  const record = await createWatchedVideo(persistence.db, actor, input, dependencies);
   expect(record.watchedAt).toEqual(new Date("2026-01-02T12:00:00Z"));
   expect(record.createdAt.getTime()).toBeGreaterThanOrEqual(start);
   expect(record.notes).toBe(input.notes);
@@ -126,36 +131,57 @@ test("accepts historical watch time and feedback while ignoring a supplied creat
   expect(createWatchedVideoInputSchema.parse(input)).not.toHaveProperty("createdAt");
 });
 
-test("rejects duplicate creation and missing references without modifying existing records", () => {
-  const original = createWatchedVideo(persistence.db, actor, {
-    ...pair,
-    notes: "Original note",
-    ratingHalfStars: 7,
-  });
-  expect(() => createWatchedVideo(persistence.db, actor, { ...pair, notes: "Changed" })).toThrow(
-    /UNIQUE constraint failed/,
+test("rejects duplicate creation and missing references without modifying existing records", async () => {
+  const original = await createWatchedVideo(
+    persistence.db,
+    actor,
+    {
+      ...pair,
+      notes: "Original note",
+      ratingHalfStars: 7,
+    },
+    dependencies,
   );
-  expect(() =>
+  await expect(
+    createWatchedVideo(persistence.db, actor, { ...pair, notes: "Changed" }, dependencies),
+  ).rejects.toThrow(/UNIQUE constraint failed/);
+  await expect(
     createWatchedVideo(
       persistence.db,
       { userId: "missing-user" },
       { ...pair, userId: "missing-user" },
+      dependencies,
     ),
-  ).toThrow(/FOREIGN KEY constraint failed/);
-  expect(() =>
-    createWatchedVideo(persistence.db, actor, { ...pair, youtubeId: "missing-video" }),
-  ).toThrow(/FOREIGN KEY constraint failed/);
+  ).rejects.toThrow("Target user does not exist.");
+  await expect(
+    createWatchedVideo(
+      persistence.db,
+      actor,
+      { ...pair, youtubeId: "missing-video" },
+      dependencies,
+    ),
+  ).rejects.toThrow("Provider should not be called for stored videos.");
   expect(persistence.db.select().from(watchedVideos).all()).toEqual([original]);
 });
 
-test("updates only supplied fields, preserves creation time and identity, and clears feedback with null", () => {
-  const original = createWatchedVideo(persistence.db, actor, {
-    ...pair,
-    watchedAt: new Date("2026-01-01T12:00:00Z"),
-    notes: "Original",
-    ratingHalfStars: 5,
-  });
-  createWatchedVideo(persistence.db, { userId: "user-2" }, { ...pair, userId: "user-2" });
+test("updates only supplied fields, preserves creation time and identity, and clears feedback with null", async () => {
+  const original = await createWatchedVideo(
+    persistence.db,
+    actor,
+    {
+      ...pair,
+      watchedAt: new Date("2026-01-01T12:00:00Z"),
+      notes: "Original",
+      ratingHalfStars: 5,
+    },
+    dependencies,
+  );
+  await createWatchedVideo(
+    persistence.db,
+    { userId: "user-2" },
+    { ...pair, userId: "user-2" },
+    dependencies,
+  );
   const other = getWatchedVideo(
     persistence.db,
     { userId: "user-2" },
@@ -191,7 +217,7 @@ test("updates only supplied fields, preserves creation time and identity, and cl
   ).toEqual(other);
 });
 
-test("returns null for missing lookups and updates and never creates implicitly", () => {
+test("returns null for missing lookups and updates and never creates implicitly", async () => {
   for (const target of [
     pair,
     { ...pair, youtubeId: "missing-video" },
@@ -204,8 +230,8 @@ test("returns null for missing lookups and updates and never creates implicitly"
   expect(persistence.db.select().from(watchedVideos).all()).toHaveLength(0);
 });
 
-test("accepts every half-star unit and nullable or empty notes, rejecting invalid feedback and dates", () => {
-  createWatchedVideo(persistence.db, actor, pair);
+test("accepts every half-star unit and nullable or empty notes, rejecting invalid feedback and dates", async () => {
+  await createWatchedVideo(persistence.db, actor, pair, dependencies);
   for (let ratingHalfStars = 1; ratingHalfStars <= 10; ratingHalfStars++) {
     expect(
       updateWatchedVideo(persistence.db, actor, { ...pair, ratingHalfStars })?.ratingHalfStars,
@@ -221,16 +247,21 @@ test("accepts every half-star unit and nullable or empty notes, rejecting invali
   ];
   for (const fields of invalidFields) {
     const input = { ...pair, ...(fields as object) };
-    expect(() =>
-      createWatchedVideo(inaccessibleDatabase(), actor, input as CreateWatchedVideoInput),
-    ).toThrow(ZodError);
+    await expect(
+      createWatchedVideo(
+        inaccessibleDatabase(),
+        actor,
+        input as CreateWatchedVideoInput,
+        dependencies,
+      ),
+    ).rejects.toThrow(ZodError);
     expect(() =>
       updateWatchedVideo(inaccessibleDatabase(), actor, input as UpdateWatchedVideoInput),
     ).toThrow(ZodError);
   }
 });
 
-test("rejects empty patches, unknown-only patches, and invalid targets before database access", () => {
+test("rejects empty patches, unknown-only patches, and invalid targets before database access", async () => {
   for (const input of [pair, { ...pair, notes: undefined }, { ...pair, createdAt: new Date() }]) {
     expect(updateWatchedVideoInputSchema.safeParse(input).success).toBe(false);
     expect(() => updateWatchedVideo(inaccessibleDatabase(), actor, input)).toThrow(ZodError);
@@ -238,7 +269,9 @@ test("rejects empty patches, unknown-only patches, and invalid targets before da
   for (const field of ["userId", "youtubeId"] as const) {
     for (const value of [undefined, null, "", " \t", 1]) {
       const target = { ...pair, [field]: value };
-      expect(() => createWatchedVideo(inaccessibleDatabase(), actor, target)).toThrow(ZodError);
+      await expect(
+        createWatchedVideo(inaccessibleDatabase(), actor, target, dependencies),
+      ).rejects.toThrow(ZodError);
       expect(() => getWatchedVideo(inaccessibleDatabase(), actor, target)).toThrow(ZodError);
       expect(() =>
         updateWatchedVideo(inaccessibleDatabase(), actor, { ...target, notes: "New" }),
@@ -247,10 +280,10 @@ test("rejects empty patches, unknown-only patches, and invalid targets before da
   }
 });
 
-test("all watched operations reject invalid actors and other users' targets before database access", () => {
+test("all watched operations reject invalid actors and other users' targets before database access", async () => {
   const operations = [
-    (caller: Actor, userId: string) =>
-      createWatchedVideo(inaccessibleDatabase(), caller, { ...pair, userId }),
+    async (caller: Actor, userId: string) =>
+      await createWatchedVideo(inaccessibleDatabase(), caller, { ...pair, userId }, dependencies),
     (caller: Actor, userId: string) =>
       updateWatchedVideo(inaccessibleDatabase(), caller, { ...pair, userId, notes: "New" }),
     (caller: Actor, userId: string) =>
@@ -259,15 +292,19 @@ test("all watched operations reject invalid actors and other users' targets befo
   ];
   for (const operation of operations) {
     for (const userId of ["user-2", "missing-user"]) {
-      expect(() => operation(actor, userId)).toThrow(AuthorizationError);
+      await expect(Promise.resolve().then(() => operation(actor, userId))).rejects.toThrow(
+        AuthorizationError,
+      );
     }
     for (const caller of [undefined, null, {}, { userId: "" }, { userId: 123 }] as unknown[]) {
-      expect(() => operation(caller as Actor, pair.userId)).toThrow(ZodError);
+      await expect(
+        Promise.resolve().then(() => operation(caller as Actor, pair.userId)),
+      ).rejects.toThrow(ZodError);
     }
   }
 });
 
-test("single and list retrieval independently include stored video and channel metadata", () => {
+test("single and list retrieval independently include stored video and channel metadata", async () => {
   seedCollection();
   for (const includeVideoMetadata of [false, true]) {
     for (const includeChannelMetadata of [false, true]) {
@@ -309,7 +346,7 @@ test("single and list retrieval independently include stored video and channel m
   ).toBe("Other user's notes");
 });
 
-test("paginates by either date in both directions with stable timestamp tie-breaking", () => {
+test("paginates by either date in both directions with stable timestamp tie-breaking", async () => {
   seedCollection();
   for (const sortBy of ["watchedAt", "createdAt"] as const) {
     for (const sortOrder of ["asc", "desc"] as const) {
@@ -339,7 +376,7 @@ test("paginates by either date in both directions with stable timestamp tie-brea
   }
 });
 
-test("cursor survives deletion and permits changed metadata flags and page limits", () => {
+test("cursor survives deletion and permits changed metadata flags and page limits", async () => {
   seedCollection();
   const first = getWatchedVideos(persistence.db, actor, { userId: pair.userId, limit: 2 });
   const cursor = first.nextCursor;
@@ -365,7 +402,7 @@ test("cursor survives deletion and permits changed metadata flags and page limit
   expect(second.nextCursor).toBeNull();
 });
 
-test("list defaults match recommendations conventions and empty targets return empty pages", () => {
+test("list defaults match recommendations conventions and empty targets return empty pages", async () => {
   expect(getWatchedVideosInputSchema.parse({ userId: pair.userId })).toEqual({
     userId: pair.userId,
     includeVideoMetadata: false,
@@ -387,7 +424,7 @@ test("list defaults match recommendations conventions and empty targets return e
   }
 });
 
-test("list rejects invalid options, cursor encodings, and cursor/query mismatches before database access", () => {
+test("list rejects invalid options, cursor encodings, and cursor/query mismatches before database access", async () => {
   seedCollection();
   const first = getWatchedVideos(persistence.db, actor, { userId: pair.userId, limit: 1 });
   const cursor = first.nextCursor;
@@ -441,13 +478,18 @@ test("list rejects invalid options, cursor encodings, and cursor/query mismatche
   }
 });
 
-test("creating and updating watched records preserve recommendations and update watched filtering", () => {
-  const recommendation = addRecommendation(persistence.db, actor, { ...pair, rationale: "Useful" });
+test("creating and updating watched records preserve recommendations and update watched filtering", async () => {
+  const recommendation = await addRecommendation(
+    persistence.db,
+    actor,
+    { ...pair, rationale: "Useful" },
+    dependencies,
+  );
   expect(
     getRecommendations(persistence.db, actor, { userId: pair.userId, watchStatus: "unwatched" })
       .items,
   ).toHaveLength(1);
-  createWatchedVideo(persistence.db, actor, pair);
+  await createWatchedVideo(persistence.db, actor, pair, dependencies);
   updateWatchedVideo(persistence.db, actor, {
     ...pair,
     notes: "Useful examples",

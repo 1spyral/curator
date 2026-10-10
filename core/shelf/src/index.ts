@@ -23,6 +23,7 @@ export {
   type UpdateWatchedVideoInput,
   updateWatchedVideoInputSchema,
 } from "./schemas/watched-videos";
+export { type ShelfCreationDependencies, VideoLoadError } from "./video-loading";
 export {
   createWatchedVideo,
   getWatchedVideo,
