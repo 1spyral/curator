@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { type Actor, AuthorizationError } from "@curator/core/identity";
 import {
-  type AddRecommendationInput,
-  addRecommendation,
-  addRecommendationInputSchema,
+  type CreateRecommendationInput,
+  createRecommendation,
+  createRecommendationInputSchema,
 } from "@curator/core/shelf";
 import { ZodError } from "zod";
 import {
@@ -55,9 +55,9 @@ beforeEach(() => {
 
 afterEach(() => persistence.close());
 
-test("adds a recommendation and returns the saved record with its default timestamp", async () => {
+test("creates a recommendation and returns the saved record with its default timestamp", async () => {
   const start = Math.floor(Date.now() / 1000) * 1000;
-  const recommendation = await addRecommendation(persistence.db, actor, input, dependencies);
+  const recommendation = await createRecommendation(persistence.db, actor, input, dependencies);
   expect(recommendation).toMatchObject(input);
   expect(recommendation.recommendedAt).toBeInstanceOf(Date);
   expect(recommendation.recommendedAt.getTime()).toBeGreaterThanOrEqual(start);
@@ -73,7 +73,7 @@ test("rejects duplicates without changing the original rationale or timestamp", 
   };
   db.insert(videoRecommendations).values(original).run();
   await expect(
-    addRecommendation(db, actor, { ...input, rationale: "A different rationale" }, dependencies),
+    createRecommendation(db, actor, { ...input, rationale: "A different rationale" }, dependencies),
   ).rejects.toThrow(/UNIQUE constraint failed/);
   expect(db.select().from(videoRecommendations).all()).toEqual([original]);
 });
@@ -81,7 +81,7 @@ test("rejects duplicates without changing the original rationale or timestamp", 
 test("rejects missing users and videos without creating recommendations", async () => {
   const { db } = persistence;
   await expect(
-    addRecommendation(
+    createRecommendation(
       db,
       { userId: "missing-user" },
       { ...input, userId: "missing-user" },
@@ -89,15 +89,15 @@ test("rejects missing users and videos without creating recommendations", async 
     ),
   ).rejects.toThrow("Target user does not exist.");
   await expect(
-    addRecommendation(db, actor, { ...input, youtubeId: "missing-video" }, dependencies),
+    createRecommendation(db, actor, { ...input, youtubeId: "missing-video" }, dependencies),
   ).rejects.toThrow("Provider should not be called for stored videos.");
   expect(db.select().from(videoRecommendations).all()).toHaveLength(0);
 });
 
 test("allows separate users to recommend the same video", async () => {
   const { db } = persistence;
-  const first = await addRecommendation(db, actor, input, dependencies);
-  const second = await addRecommendation(
+  const first = await createRecommendation(db, actor, input, dependencies);
+  const second = await createRecommendation(
     db,
     { userId: "user-2" },
     { ...input, userId: "user-2" },
@@ -119,7 +119,7 @@ test("recommends watched videos without altering watched timestamps or feedback"
     ratingHalfStars: 9,
   };
   db.insert(watchedVideos).values(watched).run();
-  expect(await addRecommendation(db, actor, input, dependencies)).toMatchObject(input);
+  expect(await createRecommendation(db, actor, input, dependencies)).toMatchObject(input);
   expect(db.select().from(watchedVideos).all()).toEqual([watched]);
 });
 
@@ -127,7 +127,7 @@ test("rejects blank fields before inserting a recommendation", async () => {
   for (const field of ["userId", "youtubeId", "rationale"] as const) {
     for (const value of ["", " \t\n"]) {
       await expect(
-        addRecommendation(persistence.db, actor, { ...input, [field]: value }, dependencies),
+        createRecommendation(persistence.db, actor, { ...input, [field]: value }, dependencies),
       ).rejects.toThrow(ZodError);
     }
   }
@@ -137,15 +137,15 @@ test("rejects blank fields before inserting a recommendation", async () => {
 test("rejects missing or wrongly typed input fields without inferring targets", async () => {
   for (const field of ["userId", "youtubeId", "rationale"] as const) {
     for (const value of [undefined, null, 123]) {
-      const result = addRecommendationInputSchema.safeParse({
+      const result = createRecommendationInputSchema.safeParse({
         ...input,
         [field]: value,
       });
       expect(result.success).toBe(false);
       if (!result.success) expect(result.error.issues[0]?.path).toEqual([field]);
-      const invalidInput = { ...input, [field]: value } as AddRecommendationInput;
+      const invalidInput = { ...input, [field]: value } as CreateRecommendationInput;
       await expect(
-        addRecommendation(persistence.db, actor, invalidInput, dependencies),
+        createRecommendation(persistence.db, actor, invalidInput, dependencies),
       ).rejects.toThrow(ZodError);
     }
   }
@@ -158,18 +158,18 @@ test("preserves rationale text and excludes extra fields from insertion", async 
     rationale: "  Helpful examples.  ",
     recommendedAt: new Date("2000-01-01"),
   };
-  expect(addRecommendationInputSchema.parse(extended)).toEqual({
+  expect(createRecommendationInputSchema.parse(extended)).toEqual({
     ...input,
     rationale: extended.rationale,
   });
-  const result = await addRecommendation(persistence.db, actor, extended, dependencies);
+  const result = await createRecommendation(persistence.db, actor, extended, dependencies);
   expect(result.rationale).toBe(extended.rationale);
   expect(result.recommendedAt.getTime()).toBeGreaterThan(extended.recommendedAt.getTime());
 });
 
 test("rejects other users' shelves before database access, even for nonexistent targets", async () => {
   const { db } = persistence;
-  const original = await addRecommendation(db, actor, input, dependencies);
+  const original = await createRecommendation(db, actor, input, dependencies);
   const inaccessibleDb = new Proxy(db, {
     get() {
       throw new Error("Authorization must happen before database access.");
@@ -177,7 +177,7 @@ test("rejects other users' shelves before database access, even for nonexistent 
   });
   for (const userId of ["user-2", "missing-user"]) {
     await expect(
-      addRecommendation(inaccessibleDb, actor, { ...input, userId }, dependencies),
+      createRecommendation(inaccessibleDb, actor, { ...input, userId }, dependencies),
     ).rejects.toThrow(AuthorizationError);
   }
   expect(db.select().from(videoRecommendations).all()).toEqual([original]);
@@ -201,7 +201,7 @@ test("rejects invalid actors before database access", async () => {
   ];
   for (const invalidActor of invalidActors) {
     await expect(
-      addRecommendation(inaccessibleDb, invalidActor as Actor, input, dependencies),
+      createRecommendation(inaccessibleDb, invalidActor as Actor, input, dependencies),
     ).rejects.toThrow(ZodError);
   }
   expect(persistence.db.select().from(videoRecommendations).all()).toHaveLength(0);

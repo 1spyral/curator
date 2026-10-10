@@ -1,13 +1,13 @@
 export {
-  addRecommendation,
+  createRecommendation,
   getRecommendation,
   getRecommendations,
   type RecommendationItem,
   type RecommendationsPage,
 } from "./recommendations";
 export {
-  type AddRecommendationInput,
-  addRecommendationInputSchema,
+  type CreateRecommendationInput,
+  createRecommendationInputSchema,
   type GetRecommendationInput,
   type GetRecommendationsInput,
   getRecommendationInputSchema,

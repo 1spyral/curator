@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { type Actor, AuthorizationError } from "@curator/core/identity";
 import {
-  addRecommendation,
   type CreateWatchedVideoInput,
+  createRecommendation,
   createWatchedVideo,
   createWatchedVideoInputSchema,
   getRecommendations,
@@ -479,7 +479,7 @@ test("list rejects invalid options, cursor encodings, and cursor/query mismatche
 });
 
 test("creating and updating watched records preserve recommendations and update watched filtering", async () => {
-  const recommendation = await addRecommendation(
+  const recommendation = await createRecommendation(
     persistence.db,
     actor,
     { ...pair, rationale: "Useful" },

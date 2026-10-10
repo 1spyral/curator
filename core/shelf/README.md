@@ -4,11 +4,11 @@
 supplies an open, migrated database connection and a trusted actor. Creation
 operations also require a lazy YouTube provider dependency.
 
-## Add recommendations
+## Create recommendations
 
 ```ts
 import type { Actor } from "@curator/core/identity";
-import { addRecommendation } from "@curator/core/shelf";
+import { createRecommendation } from "@curator/core/shelf";
 import { createYouTubeProvider } from "@curator/core/youtube";
 
 // Resolved by trusted host code from a verified session or single-user configuration.
@@ -16,14 +16,14 @@ const actor: Actor = { userId: "existing-user-id" };
 
 const dependencies = { getYouTubeProvider: () => createYouTubeProvider(config.youtube) };
 
-const recommendation = await addRecommendation(persistence.db, actor, {
+const recommendation = await createRecommendation(persistence.db, actor, {
   userId: "existing-user-id",
   youtubeId: "existing-video-id",
   rationale: "Explains a topic you are exploring.",
 }, dependencies);
 ```
 
-`addRecommendation()` returns a promise of the saved recommendation, including
+`createRecommendation()` returns a promise of the saved recommendation, including
 its database-generated `recommendedAt` timestamp.
 
 The actor identifies the caller; input `userId` explicitly identifies the target
@@ -48,7 +48,7 @@ rejects with a database constraint error and preserves the existing record.
 Network requests run outside database transactions. The loader saves video and
 channel together; valid catalog metadata remains if a later shelf insertion fails.
 
-`addRecommendationInputSchema` validates required, nonblank string fields before
+`createRecommendationInputSchema` validates required, nonblank string fields before
 insertion. Invalid input throws `ZodError` and creates no record. The input type
 is inferred from this schema, which is also exported for callers. Validation
 preserves supplied text and strips unknown fields.

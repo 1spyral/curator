@@ -2,13 +2,13 @@ import { z } from "zod";
 
 const nonBlankString = z.string().refine((value) => value.trim().length > 0, "Must not be blank.");
 
-export const addRecommendationInputSchema = z.object({
+export const createRecommendationInputSchema = z.object({
   userId: nonBlankString,
   youtubeId: nonBlankString,
   rationale: nonBlankString,
 });
 
-export type AddRecommendationInput = z.infer<typeof addRecommendationInputSchema>;
+export type CreateRecommendationInput = z.infer<typeof createRecommendationInputSchema>;
 
 export const getRecommendationInputSchema = z.object({
   userId: nonBlankString,

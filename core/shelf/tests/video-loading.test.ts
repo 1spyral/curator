@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { AuthorizationError } from "@curator/core/identity";
 import {
-  addRecommendation,
+  createRecommendation,
   createWatchedVideo,
   type ShelfCreationDependencies,
   VideoLoadError,
@@ -69,7 +69,7 @@ const operations = [
       deps: ShelfCreationDependencies,
       db = persistence.db,
       actor = { userId: target.userId },
-    ) => addRecommendation(db, actor, target, deps),
+    ) => createRecommendation(db, actor, target, deps),
   },
   {
     name: "watched",

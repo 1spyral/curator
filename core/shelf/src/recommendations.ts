@@ -23,8 +23,8 @@ import {
 } from "#persistence/schema";
 import type { Persistence } from "#persistence/sqlite";
 import {
-  type AddRecommendationInput,
-  addRecommendationInputSchema,
+  type CreateRecommendationInput,
+  createRecommendationInputSchema,
   type GetRecommendationInput,
   type GetRecommendationsInput,
   getRecommendationInputSchema,
@@ -33,7 +33,7 @@ import {
 } from "./schemas/recommendations";
 import { ensureShelfVideo, type ShelfCreationDependencies } from "./video-loading";
 
-export type { AddRecommendationInput } from "./schemas/recommendations";
+export type { CreateRecommendationInput } from "./schemas/recommendations";
 
 export type RecommendationItem = VideoRecommendationRecord & {
   video?: YouTubeVideoRecord;
@@ -66,14 +66,14 @@ function selectRecommendations(
     : videoQuery;
 }
 
-export async function addRecommendation(
+export async function createRecommendation(
   db: Persistence["db"],
   actor: Actor,
-  input: AddRecommendationInput,
+  input: CreateRecommendationInput,
   dependencies: ShelfCreationDependencies,
 ): Promise<VideoRecommendationRecord> {
   const caller = actorSchema.parse(actor);
-  const values = addRecommendationInputSchema.parse(input);
+  const values = createRecommendationInputSchema.parse(input);
   if (caller.userId !== values.userId) {
     throw new AuthorizationError(
       "The actor is not authorized to add recommendations to this user's shelf.",
