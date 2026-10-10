@@ -161,6 +161,8 @@ test("preserves rationale text and excludes extra fields from insertion", async 
   expect(createRecommendationInputSchema.parse(extended)).toEqual({
     ...input,
     rationale: extended.rationale,
+    includeVideoMetadata: false,
+    includeChannelMetadata: false,
   });
   const result = await createRecommendation(persistence.db, actor, extended, dependencies);
   expect(result.rationale).toBe(extended.rationale);

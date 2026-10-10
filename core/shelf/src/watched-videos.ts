@@ -67,12 +67,18 @@ export async function createWatchedVideo(
   actor: Actor,
   input: CreateWatchedVideoInput,
   dependencies: ShelfCreationDependencies,
-): Promise<WatchedVideoRecord> {
+): Promise<WatchedVideoItem> {
   const values = createWatchedVideoInputSchema.parse(input);
   authorizeWatchedAccess(actor, values.userId);
   await ensureShelfVideo(db, values.userId, values.youtubeId, dependencies);
-  const record = db.insert(watchedVideos).values(values).returning().get();
+  const { includeVideoMetadata, includeChannelMetadata, ...recordValues } = values;
+  const record = db.insert(watchedVideos).values(recordValues).returning().get();
   if (!record) throw new Error("Expected the inserted watched record to be returned.");
+  if (includeVideoMetadata || includeChannelMetadata) {
+    const item = getWatchedVideo(db, actor, values);
+    if (!item) throw new Error("Expected the created watched record to be returned.");
+    return item;
+  }
   return record;
 }
 

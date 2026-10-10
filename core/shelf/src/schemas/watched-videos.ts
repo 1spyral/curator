@@ -11,16 +11,22 @@ const sortOrderSchema = z.enum(["asc", "desc"]);
 
 export const createWatchedVideoInputSchema = z.object({
   ...targetFields,
+  ...metadataFields,
   watchedAt: z.date().optional(),
   notes: z.string().nullable().optional(),
   ratingHalfStars: z.number().int().min(1).max(10).nullable().optional(),
 });
 
-export const updateWatchedVideoInputSchema = createWatchedVideoInputSchema.refine(
-  ({ watchedAt, notes, ratingHalfStars }) =>
-    watchedAt !== undefined || notes !== undefined || ratingHalfStars !== undefined,
-  "At least one editable field must be supplied.",
-);
+export const updateWatchedVideoInputSchema = createWatchedVideoInputSchema
+  .omit({
+    includeVideoMetadata: true,
+    includeChannelMetadata: true,
+  })
+  .refine(
+    ({ watchedAt, notes, ratingHalfStars }) =>
+      watchedAt !== undefined || notes !== undefined || ratingHalfStars !== undefined,
+    "At least one editable field must be supplied.",
+  );
 
 export const getWatchedVideoInputSchema = z.object({ ...targetFields, ...metadataFields });
 

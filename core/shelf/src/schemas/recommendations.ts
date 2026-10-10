@@ -6,9 +6,11 @@ export const createRecommendationInputSchema = z.object({
   userId: nonBlankString,
   youtubeId: nonBlankString,
   rationale: nonBlankString,
+  includeVideoMetadata: z.boolean().default(false),
+  includeChannelMetadata: z.boolean().default(false),
 });
 
-export type CreateRecommendationInput = z.infer<typeof createRecommendationInputSchema>;
+export type CreateRecommendationInput = z.input<typeof createRecommendationInputSchema>;
 
 export const getRecommendationInputSchema = z.object({
   userId: nonBlankString,

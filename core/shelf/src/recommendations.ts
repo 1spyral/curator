@@ -71,7 +71,7 @@ export async function createRecommendation(
   actor: Actor,
   input: CreateRecommendationInput,
   dependencies: ShelfCreationDependencies,
-): Promise<VideoRecommendationRecord> {
+): Promise<RecommendationItem> {
   const caller = actorSchema.parse(actor);
   const values = createRecommendationInputSchema.parse(input);
   if (caller.userId !== values.userId) {
@@ -80,8 +80,14 @@ export async function createRecommendation(
     );
   }
   await ensureShelfVideo(db, values.userId, values.youtubeId, dependencies);
-  const recommendation = db.insert(videoRecommendations).values(values).returning().get();
+  const { includeVideoMetadata, includeChannelMetadata, ...recordValues } = values;
+  const recommendation = db.insert(videoRecommendations).values(recordValues).returning().get();
   if (!recommendation) throw new Error("Expected the inserted recommendation to be returned.");
+  if (includeVideoMetadata || includeChannelMetadata) {
+    const item = getRecommendation(db, caller, values);
+    if (!item) throw new Error("Expected the created recommendation to be returned.");
+    return item;
+  }
   return recommendation;
 }
 

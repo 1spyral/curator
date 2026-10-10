@@ -20,11 +20,20 @@ const recommendation = await createRecommendation(persistence.db, actor, {
   userId: "existing-user-id",
   youtubeId: "existing-video-id",
   rationale: "Explains a topic you are exploring.",
+  includeVideoMetadata: true,
+  includeChannelMetadata: true,
 }, dependencies);
 ```
 
 `createRecommendation()` returns a promise of the saved recommendation, including
 its database-generated `recommendedAt` timestamp.
+
+Both creation inputs accept `includeVideoMetadata` and `includeChannelMetadata`,
+defaulting to `false`. Requested flags independently add stored nested `video`
+and `channel` records, matching the get operations and their `RecommendationItem`
+and `WatchedVideoItem` return types. This works for cached and newly loaded videos
+without additional provider requests. Unrequested metadata is omitted, and flags
+are response options only; they are not saved. Watched updates do not accept them.
 
 The actor identifies the caller; input `userId` explicitly identifies the target
 shelf. After validating both, shelf requires the IDs to match. A mismatch throws
@@ -164,6 +173,8 @@ const watched = await createWatchedVideo(persistence.db, actor, {
   watchedAt: new Date("2026-01-01T12:00:00Z"),
   notes: "Helpful examples",
   ratingHalfStars: 9,
+  includeVideoMetadata: true,
+  includeChannelMetadata: true,
 }, dependencies);
 
 const updated = updateWatchedVideo(persistence.db, actor, {
