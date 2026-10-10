@@ -117,3 +117,6 @@ dist
 
 # Local MCP host configuration may contain credentials
 mcp/config.local.json
+
+# Local CLI configuration may contain credentials
+cli/config.local.json

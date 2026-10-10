@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "mode": "single-user",
+  "singleUser": {
+    "userId": "local",
+    "name": "Local user"
+  },
+  "core": {
+    "persistence": {
+      "databasePath": "curator.sqlite"
+    },
+    "youtube": {
+      "provider": "youtube-data-api",
+      "youtubeDataApi": {
+        "apiKey": "your-api-key"
+      }
+    }
+  }
+}

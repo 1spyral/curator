@@ -1,0 +1,20 @@
+{
+  "name": "@curator/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "curator": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "bun src/index.ts"
+  },
+  "dependencies": {
+    "@curator/core": "workspace:*",
+    "@curator/mcp": "workspace:*",
+    "@modelcontextprotocol/client": "^2.3.1",
+    "citty": "^0.2.2",
+    "drizzle-orm": "^0.45.4",
+    "zod": "^4"
+  }
+}
