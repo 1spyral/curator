@@ -11,3 +11,5 @@ export const coreConfigSchema = z
   .prefault({});
 
 export type CoreConfig = z.infer<typeof coreConfigSchema>;
+
+export { redactConfig } from "./redact";

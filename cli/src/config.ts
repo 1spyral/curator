@@ -83,16 +83,3 @@ export function ensureConfig(
   }
   return readConfig(path);
 }
-
-export function redactedConfig(config: CliConfig) {
-  return {
-    ...config,
-    core: {
-      ...config.core,
-      youtube: {
-        ...config.core.youtube,
-        youtubeDataApi: config.core.youtube.youtubeDataApi.apiKey ? { apiKey: "[redacted]" } : {},
-      },
-    },
-  };
-}

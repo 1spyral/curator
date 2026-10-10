@@ -2,7 +2,12 @@ import { z } from "zod";
 
 const youtubeDataApiConfigSchema = z
   .strictObject({
-    apiKey: z.string().trim().min(1, "API key must not be empty.").optional(),
+    apiKey: z
+      .string()
+      .trim()
+      .min(1, "API key must not be empty.")
+      .optional()
+      .meta({ sensitive: true }),
   })
   .transform(({ apiKey }) => (apiKey === undefined ? {} : { apiKey }))
   .readonly()

@@ -1,4 +1,5 @@
-import { ensureConfig, readConfig, redactedConfig } from "../config";
+import { redactConfig } from "@curator/core/config";
+import { cliConfigSchema, ensureConfig, readConfig } from "../config";
 import { openRuntime } from "../runtime";
 import { group, leaf, type Services, selectedPath, text } from "./shared";
 
@@ -38,7 +39,7 @@ export function setupCommands(services: Services) {
         services.emit(selectedPath(services)),
       ),
       show: leaf("show", "Show config with credentials redacted", {}, () =>
-        services.emit(redactedConfig(readConfig(selectedPath(services)))),
+        services.emit(redactConfig(cliConfigSchema, readConfig(selectedPath(services)))),
       ),
     }),
   };
