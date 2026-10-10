@@ -90,3 +90,14 @@ values and values outside this range.
 Both relationships require existing users and videos. Deleting a user or video
 cascades to its recommendation and watched records. Authorized workflow operations
 live in [Shelf](../shelf/README.md).
+
+## Read-only inspection
+
+`openDatabase(config, { readOnly: true })` opens an existing database without
+creating directories or database files, enabling WAL, or applying migrations.
+It rejects writes and is used by CLI doctor.
+
+`getMigrationStatus(db)` returns `{ applied, total, pending, drifted }`. It compares
+the recorded migration timestamps and hashes against the bundled migration files
+without modifying migration history. Drift includes unknown, mismatched, or
+non-prefix history. Use `migrateDatabase(db)` explicitly to apply pending migrations.

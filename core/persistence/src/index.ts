@@ -1,5 +1,5 @@
 export { type PersistenceConfig, persistenceConfigSchema } from "./config";
-export { migrateDatabase } from "./migrate";
+export { getMigrationStatus, migrateDatabase } from "./migrate";
 export {
   type NewUserRecord,
   type NewVideoRecommendationRecord,
