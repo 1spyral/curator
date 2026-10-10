@@ -2,7 +2,9 @@
 
 `@curator/mcp` is a single-user Bun host serving core over stdio, using the
 [official MCP TypeScript SDK](https://ts.sdk.modelcontextprotocol.io/v2/serving/stdio).
-An MCP client launches it as a local process. All protocol output goes to stdout;
+An MCP client launches it as a local process.
+For CLI-managed persistent setup, use `bun run cli mcp`; see the
+[CLI guide](../cli/README.md). This standalone entrypoint retains its own config. All protocol output goes to stdout;
 startup and transport diagnostics go to stderr.
 
 Run with defaults:
@@ -85,3 +87,7 @@ the handler, and core validates the translated operation input as well.
 SIGINT, and SIGTERM. The host TypeScript config inherits core's config so its
 internal aliases resolve while checking imported core sources. Host code uses
 public workspace exports.
+
+`@curator/mcp/stdio` exports `startMcpStdio(config)`, returning a `close()` handle
+for hosts that supply already parsed settings. `@curator/mcp/config` exports the
+MCP config schema and type.

@@ -1,6 +1,5 @@
-import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { mcpConfigSchema } from "./config";
-import { createMcpHost } from "./server";
+import { startMcpStdio } from "./stdio";
 
 async function main() {
   const args = Bun.argv.slice(2);
@@ -9,21 +8,7 @@ async function main() {
   }
   const input: unknown = args[1] ? await Bun.file(args[1]).json() : {};
   const config = mcpConfigSchema.parse(input);
-  const host = createMcpHost(config);
-  const handle = serveStdio(() => host.server, {
-    onerror: () => console.error("MCP transport error."),
-  });
-  const shutdown = () =>
-    void handle
-      .close()
-      .finally(() => host.close())
-      .catch(() => {
-        console.error("MCP shutdown failed.");
-        process.exitCode = 1;
-      });
-  process.stdin.once("end", shutdown);
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
+  startMcpStdio(config);
 }
 
 if (import.meta.main) {

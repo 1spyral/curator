@@ -13,5 +13,9 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.3.1"
+  },
+  "exports": {
+    "./config": "./src/config.ts",
+    "./stdio": "./src/stdio.ts"
   }
 }
