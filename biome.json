@@ -8,6 +8,21 @@
     "clientKind": "git",
     "useIgnoreFile": true
   },
+  "overrides": [
+    {
+      "includes": ["web/**/*.css"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnknownAtRules": {
+              "level": "error",
+              "options": { "ignore": ["stylex"] }
+            }
+          }
+        }
+      }
+    }
+  ],
   "formatter": {
     "indentStyle": "space",
     "indentWidth": 2,

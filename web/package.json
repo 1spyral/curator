@@ -1,0 +1,28 @@
+{
+  "name": "@curator/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "bun --bun next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@curator/core": "workspace:*",
+    "@stylexjs/stylex": "^0.19.1",
+    "next": "^16.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@stylexjs/babel-plugin": "^0.19.1",
+    "@stylexjs/postcss-plugin": "^0.19.1",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.29"
+  }
+}

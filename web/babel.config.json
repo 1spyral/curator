@@ -1,0 +1,14 @@
+{
+  "presets": ["next/babel"],
+  "plugins": [
+    [
+      "@stylexjs/babel-plugin",
+      {
+        "runtimeInjection": false,
+        "treeshakeCompensation": true,
+        "aliases": { "@/*": ["./src/*"] },
+        "unstable_moduleResolution": { "type": "commonJS", "rootDir": "." }
+      }
+    ]
+  ]
+}
