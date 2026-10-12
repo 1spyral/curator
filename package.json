@@ -12,7 +12,7 @@
     "check:fix": "biome check --write .",
     "db:generate": "bun run --cwd core db:generate",
     "db:migrate": "bun run --cwd core db:migrate",
-    "typecheck": "tsc --noEmit -p core/tsconfig.json && tsc --noEmit -p mcp/tsconfig.json && tsc --noEmit -p cli/tsconfig.json && bun run --cwd web typecheck",
+    "typecheck": "bun run --workspaces --if-present typecheck",
     "web": "bun run --cwd web dev",
     "mcp": "bun mcp/src/index.ts",
     "cli": "bun cli/src/index.ts"
